@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v4.0</title>
+  <title>PF Issue Logger Mobile v4.1</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -271,6 +271,37 @@
     .crop-controls button { min-height:48px; }
 
 
+
+    .photo-manager-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .photo-manager-head label { margin:0; }
+    .photo-manager-head span { padding:5px 8px; border-radius:999px; color:#1d4ed8; background:#eff6ff; font-size:10px; font-weight:900; }
+    .add-photo-btn { width:100%; min-height:78px; border:1.5px dashed #60a5fa; border-radius:13px; color:#1d4ed8; background:#eff6ff; display:grid; grid-template-columns:36px 1fr; grid-template-rows:auto auto; align-items:center; text-align:left; padding:12px; cursor:pointer; }
+    .add-photo-btn > span { grid-row:1/3; font-size:27px; }
+    .add-photo-btn strong { font-size:13px; }
+    .add-photo-btn small { color:#64748b; font-size:10px; }
+    .issue-photo-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-top:10px; }
+    .issue-photo-card { overflow:hidden; border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:0 3px 10px rgba(15,23,42,.06); }
+    .issue-photo-thumb { width:100%; height:112px; border:0; padding:0; background:#e2e8f0; cursor:pointer; }
+    .issue-photo-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .issue-photo-meta { padding:7px 8px; }
+    .issue-photo-meta strong { display:block; color:#334155; font-size:10px; }
+    .issue-photo-meta span { display:block; margin-top:2px; color:#64748b; font-size:9px; }
+    .issue-photo-actions { display:grid; grid-template-columns:1fr 1fr 1fr; border-top:1px solid #eef2f6; }
+    .issue-photo-actions button { min-height:34px; border:0; color:#2563eb; background:#f8fafc; font-size:9px; font-weight:900; }
+    .issue-photo-actions button + button { border-left:1px solid #eef2f6; }
+    .issue-photo-actions button:last-child { color:#b91c1c; }
+    .photo-empty { grid-column:1/-1; padding:16px; border:1px dashed #cbd5e1; border-radius:11px; text-align:center; color:#64748b; font-size:11px; }
+    .history-photo-actions { display:flex; gap:6px; margin-top:9px; }
+    .history-photo-actions button { border:1px solid #93c5fd; border-radius:8px; padding:6px 8px; color:#1d4ed8; background:#eff6ff; font-size:9px; font-weight:900; }
+    .photo-count-badge { color:#7c3aed; font-weight:900; }
+    .photo-viewer-modal { align-items:center; }
+    .photo-viewer-sheet { max-height:94vh; }
+    .photo-viewer-image { display:block; width:100%; max-height:70vh; object-fit:contain; background:#020617; }
+    .photo-viewer-info { padding:10px 14px; display:flex; justify-content:space-between; color:#cbd5e1; font-size:11px; }
+    .photo-viewer-actions { position:relative; z-index:3; display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:8px; padding:8px 14px calc(14px + env(safe-area-inset-bottom)); background:#0b1220; }
+    .photo-viewer-actions button { min-height:43px; }
+    @media (max-width:380px) { .issue-photo-grid { grid-template-columns:1fr; } }
+
     .pf-group-card { border:2px solid #93c5fd; }
     .group-id { display:block; margin-top:4px; color:#64748b; font-size:10px; }
     .group-id strong { color:#1d4ed8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -425,13 +456,10 @@
           <div class="card">
             <div class="section-head"><h2 class="section-title">照片與狀態</h2></div>
             <div class="field">
-              <label>Issue Photo</label>
-              <div class="photo-box" id="photoBox">
-                <button class="photo-trigger" type="button" id="takeIssuePhoto"><span id="photoPrompt"><span style="font-size:30px;display:block">📷</span><strong>拍照或選擇照片</strong><span style="font-size:11px;display:block">自動壓縮後儲存在本機</span></span></button>
-                <img class="photo-preview" id="photoPreview" alt="Issue 預覽照片" />
-                <input type="file" id="photoInput" accept="image/*" capture="environment" aria-label="拍照或選擇照片" />
-                <div class="photo-actions" id="photoActions"><button type="button" id="removePhoto">移除照片</button></div>
-              </div>
+              <div class="photo-manager-head"><label>Issue Photos</label><span><strong id="draftPhotoCount">0</strong> 張</span></div>
+              <button class="add-photo-btn" type="button" id="takeIssuePhoto"><span>📷</span><strong>拍照／加入照片</strong><small>可連續加入多張，自動壓縮儲存在本機</small></button>
+              <input type="file" id="photoInput" accept="image/*" capture="environment" multiple hidden />
+              <div class="issue-photo-grid" id="draftPhotoList"></div>
             </div>
             <div class="grid">
               <div class="field"><label for="status">Status</label><select id="status" name="status"><option>Open</option><option>Tracking</option><option>Closed</option></select></div>
@@ -470,7 +498,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v4.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>資料模型：一筆 Issue Group 對應多個 PF Code<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入<br>CSV：一列一 Issue／一列一 PF 兩種視圖</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v4.1<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>資料模型：一筆 Issue Group 對應多個 PF Code<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入<br>CSV：一列一 Issue／一列一 PF 兩種視圖</p></div>
         </div>
       </div>
     </section>
@@ -524,6 +552,16 @@
   </div>
 </div>
 
+
+<div class="modal photo-viewer-modal" id="photoViewerModal" role="dialog" aria-modal="true" aria-labelledby="photoViewerTitle">
+  <div class="modal-sheet photo-viewer-sheet">
+    <div class="modal-head"><h2 id="photoViewerTitle">Issue Photo</h2><button class="icon-btn" type="button" id="closePhotoViewer" aria-label="關閉">×</button></div>
+    <img id="photoViewerImage" class="photo-viewer-image" alt="Issue Photo 預覽" />
+    <div class="photo-viewer-info"><strong id="photoViewerCounter"></strong><span id="photoViewerTime"></span></div>
+    <div class="photo-viewer-actions"><button type="button" class="secondary-btn" id="prevPhoto">上一張</button><button type="button" class="secondary-btn" id="downloadViewedPhoto">下載 JPG</button><button type="button" class="secondary-btn" id="nextPhoto">下一張</button></div>
+  </div>
+</div>
+
 <div class="success-overlay" id="successOverlay">
   <div class="success-card"><div class="check">✓</div><h2>Issue 已記錄</h2><p id="successText"></p><button type="button" id="successDone">完成</button></div>
 </div>
@@ -537,7 +575,9 @@
   const SETTINGS_KEY = 'pfIssueLogger.settings.v1';
   let records = loadAndMigrateRecords();
   let settings = safeParse(localStorage.getItem(SETTINGS_KEY), { reporter: 'Benson' });
-  let photoData = '';
+  let draftPhotos = [];
+  let photoViewerState = {photos:[],index:0,groupId:'',primaryPf:''};
+  let zipLibPromise = null;
   let scanner = null;
   let scannerRunning = false;
   let nativeStream = null;
@@ -566,6 +606,11 @@
   let lastBarcodeAt = 0;
   let draftPfCodes = [];
   let draftGroupId = newGroupId();
+  const ZIP_CDNS = [
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+  ];
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -596,10 +641,15 @@
     if(typeof p==='string')return{code:normalizePf(p),order:index+1,source:'Manual',addedAt:new Date().toISOString()};
     return{code:normalizePf(p.code||p.pfCode||''),order:index+1,source:p.source||p.pfSource||'Manual',addedAt:p.addedAt||new Date().toISOString(),rawValue:p.rawValue||p.barcodeRaw||'',format:p.format||p.barcodeFormat||'',labelType:p.labelType||'',labelDate:p.labelDate||'',ocrRisk:p.ocrRisk||''};
   }
+  function normalizePhoto(x,index=0,fallbackTime='') {
+    if(typeof x==='string')return{id:'IMG-'+Date.now().toString(36)+'-'+index,addedAt:fallbackTime||new Date().toISOString(),dataUrl:x,originalName:'',size:0};
+    return{id:x.id||('IMG-'+Date.now().toString(36)+'-'+index),addedAt:x.addedAt||fallbackTime||new Date().toISOString(),dataUrl:x.dataUrl||x.photo||'',originalName:x.originalName||'',size:x.size||0};
+  }
   function normalizeGroupRecord(r,index=0) {
     const list=Array.isArray(r.pfCodes)?r.pfCodes:(r.pfCode?[{code:r.pfCode,source:r.pfSource||'Legacy',rawValue:r.barcodeRaw||'',format:r.barcodeFormat||'',labelType:r.labelType||'',labelDate:r.labelDate||''}]:[]);
     const pfCodes=list.map(normalizePfEntry).filter(x=>x.code);
-    return{...r,id:r.id||uid(),groupId:r.groupId||('LEGACY-'+String(r.id||index+1).replace(/[^A-Z0-9-]/gi,'').toUpperCase()),pfCodes,pfCode:undefined,pfSource:undefined};
+    const photos=Array.isArray(r.photos)?r.photos.map((x,i)=>normalizePhoto(x,i,r.createdAt)):(r.photo?[normalizePhoto({dataUrl:r.photo,addedAt:r.createdAt},0,r.createdAt)]:[]);
+    return{...r,id:r.id||uid(),groupId:r.groupId||('LEGACY-'+String(r.id||index+1).replace(/[^A-Z0-9-]/gi,'').toUpperCase()),pfCodes,photos,pfCode:undefined,pfSource:undefined,photo:undefined};
   }
   function loadAndMigrateRecords() {
     const current=safeParse(localStorage.getItem(STORAGE_KEY),null);if(Array.isArray(current))return current.map(normalizeGroupRecord);
@@ -1181,42 +1231,44 @@
 
   pfInput.addEventListener('input', e => { if (e.isTrusted) captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''}; const pos = pfInput.selectionStart; pfInput.value = pfInput.value.toUpperCase(); try { pfInput.setSelectionRange(pos, pos); } catch (_) {} });
 
-  $('#takeIssuePhoto').addEventListener('click', () => $('#photoInput').click());
-  $('#photoInput').addEventListener('change', async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return showToast('請選擇圖片檔案', 'error');
-    if (file.size > 15 * 1024 * 1024) return showToast('照片超過 15MB，請改用較小圖片', 'error');
-    try {
-      photoData = await compressImage(file, 1000, .72);
-      $('#photoPreview').src = photoData;
-      $('#photoPreview').style.display = 'block';
-      $('#photoPrompt').style.display = 'none';
-      $('#takeIssuePhoto').style.display = 'none';
-      $('#photoActions').style.display = 'block';
-    } catch { showToast('照片處理失敗，請重新拍攝', 'error'); }
+  $('#takeIssuePhoto').addEventListener('click',()=>$('#photoInput').click());
+  $('#photoInput').addEventListener('change',async e=>{
+    const files=[...(e.target.files||[])];if(!files.length)return;
+    if(draftPhotos.length+files.length>12){showToast('每個 Issue Group 最多 12 張照片','error');e.target.value='';return}
+    for(const file of files){
+      if(!file.type.startsWith('image/'))continue;if(file.size>20*1024*1024){showToast(file.name+' 超過 20MB，已略過','error');continue}
+      try{const dataUrl=await compressImage(file,1400,.76);draftPhotos.push({id:'IMG-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,5).toUpperCase(),addedAt:new Date().toISOString(),dataUrl,originalName:file.name,size:file.size})}catch(_){showToast(file.name+' 處理失敗','error')}
+    }
+    e.target.value='';renderDraftPhotos();showToast('照片已加入，共 '+draftPhotos.length+' 張','success');
   });
-
-  function compressImage(file, maxSide, quality) {
-    return new Promise((resolve, reject) => {
-      const img = new Image(); const url = URL.createObjectURL(file);
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (Math.max(w,h) > maxSide) { const r = maxSide / Math.max(w,h); w = Math.round(w*r); h = Math.round(h*r); }
-        const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        URL.revokeObjectURL(url); resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject; img.src = url;
-    });
+  $('#draftPhotoList').addEventListener('click',e=>{
+    const view=e.target.closest('[data-view-draft-photo]'),del=e.target.closest('[data-delete-draft-photo]');
+    if(view)openPhotoViewer(draftPhotos,Number(view.dataset.viewDraftPhoto),draftGroupId,draftPfCodes[0]?.code||'NO-PF');
+    const dl=e.target.closest('[data-download-draft-photo]');if(dl){const i=Number(dl.dataset.downloadDraftPhoto);downloadPhoto(draftPhotos[i],i,draftGroupId,draftPfCodes[0]?.code||'NO-PF')}
+    if(del){const i=Number(del.dataset.deleteDraftPhoto);draftPhotos.splice(i,1);renderDraftPhotos();showToast('照片已刪除')}
+  });
+  function renderDraftPhotos(){
+    $('#draftPhotoCount').textContent=draftPhotos.length;const list=$('#draftPhotoList');
+    if(!draftPhotos.length){list.innerHTML='<div class="photo-empty">尚未加入 Issue Photo</div>';return}
+    list.innerHTML=draftPhotos.map((p,i)=>'<div class="issue-photo-card"><button type="button" class="issue-photo-thumb" data-view-draft-photo="'+i+'"><img src="'+p.dataUrl+'" alt="Issue Photo '+(i+1)+'"></button><div class="issue-photo-meta"><strong>Photo '+String(i+1).padStart(2,'0')+'</strong><span>'+esc(nowText(p.addedAt))+'</span></div><div class="issue-photo-actions"><button type="button" data-view-draft-photo="'+i+'">預覽</button><button type="button" data-download-draft-photo="'+i+'">下載</button><button type="button" data-delete-draft-photo="'+i+'">刪除</button></div></div>').join('');
   }
+  function compressImage(file,maxSide,quality){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{let w=img.width,h=img.height;if(Math.max(w,h)>maxSide){const r=maxSide/Math.max(w,h);w=Math.round(w*r);h=Math.round(h*r)}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);resolve(c.toDataURL('image/jpeg',quality))};img.onerror=reject;img.src=url})}
+  function resetDraftPhotos(){draftPhotos=[];renderDraftPhotos()}
 
-  function clearPhoto() {
-    photoData = ''; $('#photoPreview').src = ''; $('#photoPreview').style.display = 'none';
-    $('#photoPrompt').style.display = 'block'; $('#takeIssuePhoto').style.display = 'block';
-    $('#photoActions').style.display = 'none'; $('#photoInput').value = '';
-  }
-  $('#removePhoto').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); clearPhoto(); });
+  function safeFilePart(v){return String(v||'NA').replace(/[^A-Z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,60)||'NA'}
+  function compactTime(iso){const d=new Date(iso||Date.now());return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0')}
+  function photoFileName(groupId,primaryPf,index,photo){return safeFilePart(groupId)+'_'+safeFilePart(primaryPf)+'_IMG-'+String(index+1).padStart(2,'0')+'_'+compactTime(photo.addedAt)+'.jpg'}
+  function dataUrlToBlob(dataUrl){const [meta,b64]=dataUrl.split(','),mime=(meta.match(/data:([^;]+)/)||[])[1]||'image/jpeg',bytes=atob(b64),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime})}
+  function dataUrlBase64(dataUrl){return String(dataUrl||'').split(',')[1]||''}
+  function downloadPhoto(photo,index,groupId,primaryPf){downloadBlob(dataUrlToBlob(photo.dataUrl),photoFileName(groupId,primaryPf,index,photo));showToast('JPG 已下載','success')}
+  function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+  function openPhotoViewer(photos,index,groupId,primaryPf){if(!photos?.length)return;photoViewerState={photos,index:Math.max(0,Math.min(index,photos.length-1)),groupId,primaryPf};renderPhotoViewer();$('#photoViewerModal').classList.add('open');document.body.style.overflow='hidden'}
+  function renderPhotoViewer(){const s=photoViewerState,p=s.photos[s.index];if(!p)return;$('#photoViewerTitle').textContent=s.groupId+' · Photo '+String(s.index+1).padStart(2,'0');$('#photoViewerImage').src=p.dataUrl;$('#photoViewerCounter').textContent=(s.index+1)+' / '+s.photos.length;$('#photoViewerTime').textContent=nowText(p.addedAt);$('#prevPhoto').disabled=s.index===0;$('#nextPhoto').disabled=s.index===s.photos.length-1}
+  function closePhotoViewer(){$('#photoViewerModal').classList.remove('open');document.body.style.overflow=''}
+  $('#closePhotoViewer').addEventListener('click',closePhotoViewer);$('#photoViewerModal').addEventListener('click',e=>{if(e.target.id==='photoViewerModal')closePhotoViewer()});
+  $('#prevPhoto').addEventListener('click',()=>{if(photoViewerState.index>0){photoViewerState.index--;renderPhotoViewer()}});$('#nextPhoto').addEventListener('click',()=>{if(photoViewerState.index<photoViewerState.photos.length-1){photoViewerState.index++;renderPhotoViewer()}});
+  $('#downloadViewedPhoto').addEventListener('click',()=>{const s=photoViewerState,p=s.photos[s.index];if(p)downloadPhoto(p,s.index,s.groupId,s.primaryPf)});
 
   form.addEventListener('submit', e => {
     e.preventDefault();
@@ -1224,12 +1276,12 @@
     if(!draftPfCodes.length){$('.pf-group-card').scrollIntoView({behavior:'smooth',block:'center'});showToast('送出前至少需要加入 1 個 PF Code','error');return}
     if(!form.reportValidity()){showToast('請完成所有必填共同 Issue 欄位','error');return}
     const data=new FormData(form),record={
-      id:uid(),groupId:draftGroupId,createdAt:new Date().toISOString(),pfCodes:draftPfCodes.map((p,i)=>({...p,order:i+1})),project:data.get('project').trim(),stage:data.get('stage'),station:data.get('station'),category:data.get('category'),severity:data.get('severity'),symptom:data.get('symptom').trim(),action:data.get('action').trim(),owner:data.get('owner').trim(),status:data.get('status'),reporter:data.get('reporter').trim()||settings.reporter,photo:photoData
+      id:uid(),groupId:draftGroupId,createdAt:new Date().toISOString(),pfCodes:draftPfCodes.map((p,i)=>({...p,order:i+1})),project:data.get('project').trim(),stage:data.get('stage'),station:data.get('station'),category:data.get('category'),severity:data.get('severity'),symptom:data.get('symptom').trim(),action:data.get('action').trim(),owner:data.get('owner').trim(),status:data.get('status'),reporter:data.get('reporter').trim()||settings.reporter,photos:draftPhotos.map(normalizePhoto)
     };
     records.unshift(record);try{saveRecords()}catch(err){records.shift();showToast('本機儲存空間不足，請先匯出並清理舊紀錄。','error');return}
-    $('#successText').innerHTML='<strong>'+esc(record.groupId)+'</strong><br>'+record.pfCodes.length+' PF · '+esc(record.station+' / '+record.category)+'<br>'+esc(nowText(record.createdAt)+' / '+record.reporter);
+    $('#successText').innerHTML='<strong>'+esc(record.groupId)+'</strong><br>'+record.pfCodes.length+' PF · '+esc(record.station+' / '+record.category)+'<br>'+record.photos.length+' Photos · '+esc(nowText(record.createdAt)+' / '+record.reporter);
     $('#successOverlay').classList.add('open');const keep={project:record.project,stage:record.stage,station:record.station,reporter:record.reporter};
-    form.reset();clearPhoto();resetDraftPfGroup();captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};ocrAwaitingConfirmation=false;pendingOcrMeta=null;pfBeforeOcr='';
+    form.reset();resetDraftPhotos();resetDraftPfGroup();captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};ocrAwaitingConfirmation=false;pendingOcrMeta=null;pfBeforeOcr='';
     $('#project').value=keep.project;$('#stage').value=keep.stage;$('#station').value=keep.station;$('#reporter').value=keep.reporter;form.querySelector('[name="severity"][value="Mid"]').checked=true;
   });
 
@@ -1245,28 +1297,36 @@
     const term=$('#historySearch').value.trim().toLowerCase();
     const filtered=records.filter(r=>[r.groupId,...(r.pfCodes||[]).map(p=>p.code),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.owner,r.status,r.reporter].join(' ').toLowerCase().includes(term));
     const list=$('#recordList');if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📋</div><strong>'+(records.length?'找不到符合的 Issue Group':'尚無 Issue Group')+'</strong></div>';return}
-    list.innerHTML=filtered.map(r=>{const cls=String(r.status).toLowerCase(),pfs=r.pfCodes||[];return '<article class="record"><div class="record-main"><div><div class="record-group">'+esc(r.groupId)+'</div><div class="record-meta">'+esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · '))+'</div><div class="record-issue">'+esc(r.symptom)+'</div><div class="history-pf-list">'+pfs.map((p,i)=>'<span class="history-pf">'+(i+1)+'. '+esc(p.code)+' · '+esc(p.source)+'</span>').join('')+'</div></div><div><span class="badge '+esc(cls)+'">'+esc(r.status)+'</span></div></div><div class="record-footer"><span>'+esc(nowText(r.createdAt))+' · '+esc(r.reporter||'-')+' · '+pfs.length+' PF'+(r.photo?' · 📷':'')+'</span><button type="button" data-delete="'+esc(r.id)+'">刪除</button></div></article>'}).join('');
+    list.innerHTML=filtered.map(r=>{const cls=String(r.status).toLowerCase(),pfs=r.pfCodes||[],photos=r.photos||[];return '<article class="record"><div class="record-main"><div><div class="record-group">'+esc(r.groupId)+'</div><div class="record-meta">'+esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · '))+'</div><div class="record-issue">'+esc(r.symptom)+'</div><div class="history-pf-list">'+pfs.map((p,i)=>'<span class="history-pf">'+(i+1)+'. '+esc(p.code)+' · '+esc(p.source)+'</span>').join('')+'</div><div class="history-photo-actions">'+(photos.length?'<button type="button" data-view-group-photos="'+esc(r.id)+'">查看照片 ('+photos.length+')</button>':'')+'<button type="button" data-export-package="'+esc(r.id)+'">匯出 Issue Package</button></div></div><div><span class="badge '+esc(cls)+'">'+esc(r.status)+'</span></div></div><div class="record-footer"><span>'+esc(nowText(r.createdAt))+' · '+esc(r.reporter||'-')+' · '+pfs.length+' PF · <span class="photo-count-badge">📷 '+photos.length+'</span></span><button type="button" data-delete="'+esc(r.id)+'">刪除</button></div></article>'}).join('');
   }
   $('#historySearch').addEventListener('input',renderRecords);
-  $('#recordList').addEventListener('click',e=>{const id=e.target.dataset.delete;if(!id)return;if(!confirm('確定刪除整筆 Issue Group？'))return;records=records.filter(r=>r.id!==id);saveRecords();renderRecords();showToast('Issue Group 已刪除')});
+  $('#recordList').addEventListener('click',async e=>{const del=e.target.dataset.delete,view=e.target.dataset.viewGroupPhotos,pkg=e.target.dataset.exportPackage;if(del){if(!confirm('確定刪除整筆 Issue Group？'))return;records=records.filter(r=>r.id!==del);saveRecords();renderRecords();showToast('Issue Group 已刪除');return}if(view){const r=records.find(x=>x.id===view);if(r)openPhotoViewer(r.photos||[],0,r.groupId,r.pfCodes?.[0]?.code||'NO-PF');return}if(pkg){const r=records.find(x=>x.id===pkg);if(r)await exportIssuePackage(r)}});
   function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
-  const COMMON_COLS=['Group ID','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
-  function commonRow(r){return[r.groupId,r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']}
+  const COMMON_COLS=['Group ID','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Photo Count'];
+  function commonRow(r){return[r.groupId,r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,(r.photos||[]).length]}
   $('#exportGroupCsv').addEventListener('click',()=>{
     if(!records.length)return showToast('目前沒有可匯出的 Issue Group','error');
-    const cols=['Group ID','Created At','PF Count','PF Codes','PF Sources','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
-    const rows=records.map(r=>[r.groupId,r.createdAt,r.pfCodes.length,r.pfCodes.map(p=>p.code).join('; '),r.pfCodes.map(p=>p.source).join('; '),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
+    const cols=['Group ID','Created At','PF Count','PF Codes','PF Sources','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Photo Count'];
+    const rows=records.map(r=>[r.groupId,r.createdAt,r.pfCodes.length,r.pfCodes.map(p=>p.code).join('; '),r.pfCodes.map(p=>p.source).join('; '),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,(r.photos||[]).length]);
     download('\ufeff'+[cols,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n'),'pf-issues-group-view-'+dateStamp()+'.csv','text/csv;charset=utf-8');showToast('已匯出一列一 Issue 視圖','success');
   });
   $('#exportPfCsv').addEventListener('click',()=>{
     if(!records.length)return showToast('目前沒有可匯出的 PF','error');
-    const cols=['Group ID','PF Order','PF Code','PF Source','Raw Barcode','Barcode Format','Label TYPE','Label Date','OCR Risk','PF Added At','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
-    const rows=records.flatMap(r=>r.pfCodes.map((p,i)=>[r.groupId,i+1,p.code,p.source,p.rawValue||'',p.format||'',p.labelType||'',p.labelDate||'',p.ocrRisk||'',p.addedAt||'',r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']));
+    const cols=['Group ID','PF Order','PF Code','PF Source','Raw Barcode','Barcode Format','Label TYPE','Label Date','OCR Risk','PF Added At','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Photo Count'];
+    const rows=records.flatMap(r=>r.pfCodes.map((p,i)=>[r.groupId,i+1,p.code,p.source,p.rawValue||'',p.format||'',p.labelType||'',p.labelDate||'',p.ocrRisk||'',p.addedAt||'',r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,(r.photos||[]).length]));
     download('\ufeff'+[cols,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n'),'pf-issues-pf-view-'+dateStamp()+'.csv','text/csv;charset=utf-8');showToast('已匯出一列一 PF 視圖','success');
   });
 
+  async function ensureZipLibrary(){if(window.JSZip)return true;if(zipLibPromise)return zipLibPromise;zipLibPromise=(async()=>{for(const url of ZIP_CDNS){try{await loadScript(url);if(window.JSZip)return true}catch(_){}}return false})();const ok=await zipLibPromise;if(!ok)zipLibPromise=null;return ok}
+  function issueSummaryObject(r){const primary=r.pfCodes?.[0]?.code||'NO-PF';return{groupId:r.groupId,createdAt:r.createdAt,pfCount:(r.pfCodes||[]).length,pfCodes:r.pfCodes||[],project:r.project,stage:r.stage,station:r.station,category:r.category,severity:r.severity,failureSymptom:r.symptom,immediateAction:r.action,owner:r.owner,status:r.status,reporter:r.reporter,photoCount:(r.photos||[]).length,photos:(r.photos||[]).map((p,i)=>({order:i+1,addedAt:p.addedAt,fileName:photoFileName(r.groupId,primary,i,p)}))}}
+  function issueSummaryCsv(r){const primary=r.pfCodes?.[0]?.code||'NO-PF',files=(r.photos||[]).map((p,i)=>photoFileName(r.groupId,primary,i,p));const cols=['Group ID','Created At','PF Count','PF Codes','PF Sources','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Photo Count','Photo Files'];const row=[r.groupId,r.createdAt,r.pfCodes.length,r.pfCodes.map(p=>p.code).join('; '),r.pfCodes.map(p=>p.source).join('; '),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,(r.photos||[]).length,files.join('; ')];return '\ufeff'+[cols,row].map(x=>x.map(csvCell).join(',')).join('\r\n')}
+  async function exportIssuePackage(r){
+    showToast('正在建立 Issue Package…');if(!await ensureZipLibrary())return showToast('ZIP 元件無法載入，請確認網路後重試','error');
+    try{const zip=new JSZip(),base=safeFilePart(r.groupId),primary=r.pfCodes?.[0]?.code||'NO-PF';zip.file(base+'_Summary.csv',issueSummaryCsv(r));zip.file(base+'_Summary.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),issueGroup:issueSummaryObject(r)},null,2));const folder=zip.folder('Photos');(r.photos||[]).forEach((photo,i)=>folder.file(photoFileName(r.groupId,primary,i,photo),dataUrlBase64(photo.dataUrl),{base64:true}));const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});downloadBlob(blob,base+'_Issue-Package_'+dateStamp()+'.zip');showToast('Issue Package ZIP 已匯出','success')}catch(err){showToast('Issue Package 建立失敗','error')}
+  }
+
   $('#exportJson').addEventListener('click', () => {
-    download(JSON.stringify({version:2, model:'Issue Group with multiple PF Codes', exportedAt:new Date().toISOString(), records}, null, 2), 'pf-issues-backup-' + dateStamp() + '.json', 'application/json');
+    download(JSON.stringify({version:3, model:'Issue Group with multiple PF Codes and photos', exportedAt:new Date().toISOString(), records}, null, 2), 'pf-issues-backup-' + dateStamp() + '.json', 'application/json');
     showToast('JSON 備份已匯出', 'success');
   });
   $('#importJsonBtn').addEventListener('click', () => $('#importJsonInput').click());
@@ -1296,7 +1356,7 @@
   function dateStamp() { const d = new Date(); return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); }
   function download(content, name, type) { const blob = new Blob([content], {type}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
 
-  renderDraftPfList(); updateMetrics(); renderRecords();
+  renderDraftPfList(); renderDraftPhotos(); updateMetrics(); renderRecords();
 })();
 </script>
 </body>
