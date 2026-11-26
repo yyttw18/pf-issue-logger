@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1739" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>PF Issue Logger Mobile v2</title>
+  <style>
+    :root {
+      --navy: #0b1739;
+      --navy-2: #142653;
+      --blue: #2563eb;
+      --blue-2: #dbeafe;
+      --cyan: #06b6d4;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #dbe2ea;
+      --surface: #ffffff;
+      --canvas: #f2f5f9;
+      --shadow: 0 10px 28px rgba(15, 23, 42, .10);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 100% 0%, rgba(37,99,235,.12), transparent 32%),
+        var(--canvas);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; font-size: 16px; }
+    button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .app { max-width: 720px; margin: 0 auto; padding-bottom: 92px; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      color: white;
+      background: linear-gradient(135deg, var(--navy), var(--navy-2));
+      padding: calc(14px + env(safe-area-inset-top)) 18px 14px;
+      box-shadow: 0 6px 22px rgba(11,23,57,.22);
+    }
+    .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: grid; place-items: center;
+      color: var(--navy); background: linear-gradient(135deg, #67e8f9, #bfdbfe);
+      font-weight: 900; letter-spacing: -.04em;
+    }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+    .brand p { margin: 2px 0 0; color: #cbd5e1; font-size: 12px; }
+    .sync-pill {
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+      color: #bbf7d0; background: rgba(22,163,74,.15);
+      border: 1px solid rgba(134,239,172,.2); border-radius: 999px;
+      padding: 7px 9px; font-size: 11px; font-weight: 700;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.13); }
+    .content { padding: 14px; }
+    .hero {
+      padding: 16px; border-radius: var(--radius); color: white;
+      background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+      box-shadow: var(--shadow); overflow: hidden; position: relative;
+    }
+    .hero::after { content: ""; position: absolute; width: 170px; height: 170px; border: 28px solid rgba(255,255,255,.08); border-radius: 50%; right: -88px; top: -90px; }
+    .hero-label { font-size: 12px; color: #dbeafe; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+    .hero h2 { margin: 6px 0 4px; font-size: 24px; }
+    .hero p { margin: 0; font-size: 13px; color: #e0f2fe; }
+    .scan-btn {
+      width: 100%; margin-top: 14px; min-height: 58px; border: 0; border-radius: 15px;
+      background: white; color: #1d4ed8; font-weight: 900; font-size: 17px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12); cursor: pointer;
+    }
+    .scan-btn svg { width: 24px; height: 24px; }
+    .card {
+      margin-top: 14px; padding: 16px; border-radius: var(--radius);
+      background: var(--surface); border: 1px solid rgba(219,226,234,.8); box-shadow: 0 4px 16px rgba(15,23,42,.05);
+    }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-title { margin: 0; font-size: 16px; }
+    .required-note { font-size: 11px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { margin-bottom: 13px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; margin: 0 0 7px; color: #344054; font-size: 12px; font-weight: 800; }
+    .req { color: var(--red); }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 12px;
+      background: #fff; color: var(--ink); padding: 12px 13px; outline: none;
+      transition: border .15s, box-shadow .15s; min-height: 46px;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #60a5fa; box-shadow: 0 0 0 4px rgba(37,99,235,.11); }
+    textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+    .pf-wrap { position: relative; }
+    .pf-wrap input { padding-right: 50px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .mini-scan {
+      position: absolute; right: 5px; top: 5px; width: 38px; height: 36px;
+      border: 0; border-radius: 9px; background: var(--blue-2); color: var(--blue); cursor: pointer;
+    }
+    .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .chip input { position: absolute; opacity: 0; pointer-events: none; }
+    .chip span {
+      display: flex; justify-content: center; align-items: center; text-align: center;
+      min-height: 42px; padding: 8px; border: 1px solid var(--line); border-radius: 11px;
+      font-size: 12px; font-weight: 800; color: #475467; background: #fff;
+    }
+    .chip input:checked + span { color: var(--blue); border-color: #93c5fd; background: #eff6ff; box-shadow: inset 0 0 0 1px #93c5fd; }
+    .photo-box {
+      border: 1.5px dashed #aab7c6; border-radius: 14px; min-height: 114px;
+      display: grid; place-items: center; text-align: center; color: var(--muted);
+      background: #f8fafc; overflow: hidden; position: relative;
+    }
+    .photo-box input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .photo-box strong { display: block; margin-top: 6px; color: #344054; font-size: 13px; }
+    .photo-preview { display: none; width: 100%; height: 170px; object-fit: cover; }
+    .photo-actions { display: none; position: absolute; right: 8px; top: 8px; z-index: 2; }
+    .photo-actions button { border: 0; color: white; background: rgba(15,23,42,.72); padding: 8px 10px; border-radius: 9px; font-size: 12px; }
+    .submit-btn {
+      width: 100%; min-height: 54px; border: 0; border-radius: 14px;
+      color: white; background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      font-weight: 900; font-size: 16px; box-shadow: 0 8px 18px rgba(37,99,235,.24); cursor: pointer;
+    }
+    .submit-btn:disabled { background: #98a2b3; box-shadow: none; cursor: not-allowed; }
+    .helper { margin: 9px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
+    .bottom-nav {
+      position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: 0;
+      width: min(720px, 100%); padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      background: rgba(255,255,255,.94); border-top: 1px solid var(--line); backdrop-filter: blur(15px);
+    }
+    .nav-btn { border: 0; background: transparent; color: #667085; padding: 7px 4px; border-radius: 11px; font-size: 11px; font-weight: 800; cursor: pointer; }
+    .nav-btn svg { display: block; margin: 0 auto 4px; width: 21px; height: 21px; }
+    .nav-btn.active { color: var(--blue); background: #eff6ff; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 14px; }
+    .metric { background: white; padding: 13px 8px; border: 1px solid var(--line); border-radius: 14px; text-align: center; }
+    .metric strong { display: block; font-size: 22px; }
+    .metric span { color: var(--muted); font-size: 11px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .toolbar input { flex: 1; }
+    .secondary-btn, .danger-btn {
+      min-height: 44px; border-radius: 11px; padding: 0 13px; font-weight: 800; font-size: 12px; cursor: pointer;
+    }
+    .secondary-btn { border: 1px solid #93c5fd; color: var(--blue); background: #eff6ff; }
+    .danger-btn { border: 1px solid #fecaca; color: var(--red); background: #fff1f2; }
+    .record-list { display: grid; gap: 10px; }
+    .record { background: white; border: 1px solid var(--line); border-radius: 15px; overflow: hidden; }
+    .record-main { padding: 13px; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    .record-pf { font-weight: 900; letter-spacing: .05em; }
+    .record-meta { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .record-issue { margin-top: 9px; font-size: 13px; line-height: 1.45; }
+    .badge { display: inline-flex; align-items: center; height: 25px; padding: 0 9px; border-radius: 999px; font-size: 10px; font-weight: 900; }
+    .badge.open { color: var(--red); background: var(--red-bg); }
+    .badge.tracking { color: var(--amber); background: var(--amber-bg); }
+    .badge.closed { color: var(--green); background: var(--green-bg); }
+    .record-footer { padding: 9px 13px; border-top: 1px solid #eef2f6; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+    .record-footer button { border: 0; background: transparent; color: var(--red); font-weight: 800; cursor: pointer; }
+    .empty { text-align: center; padding: 42px 15px; color: var(--muted); }
+    .empty-icon { font-size: 34px; margin-bottom: 8px; }
+    .settings-row { padding: 14px 0; border-bottom: 1px solid #edf1f5; }
+    .settings-row:last-child { border-bottom: 0; }
+    .settings-row h3 { margin: 0 0 5px; font-size: 14px; }
+    .settings-row p { margin: 0 0 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .modal {
+      position: fixed; inset: 0; z-index: 100; display: none; align-items: flex-end;
+      background: rgba(2,6,23,.72); backdrop-filter: blur(4px);
+    }
+    .modal.open { display: flex; }
+    .modal-sheet { width: 100%; max-width: 720px; margin: 0 auto; background: #0b1220; color: white; border-radius: 22px 22px 0 0; overflow: hidden; }
+    .modal-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-head h2 { margin: 0; font-size: 16px; }
+    .icon-btn { width: 38px; height: 38px; border: 0; border-radius: 50%; color: white; background: rgba(255,255,255,.1); font-size: 20px; cursor: pointer; }
+    #reader { min-height: 290px; background: #030712; display:grid; place-items:center; overflow:hidden; position:relative; }
+    #reader video { width:100%; min-height:290px; max-height:58vh; object-fit:cover; }
+    .scan-line { position:absolute; z-index:2; left:8%; right:8%; top:50%; height:2px; background:#22d3ee; box-shadow:0 0 16px #22d3ee; pointer-events:none; animation:scanMove 1.8s ease-in-out infinite alternate; }
+    @keyframes scanMove { from { transform:translateY(-54px); } to { transform:translateY(54px); } }
+    .scanner-status { margin:0; padding:10px 16px; background:#111827; color:#bfdbfe; text-align:center; font-size:12px; line-height:1.4; }
+    .scan-guide { padding: 12px 16px calc(18px + env(safe-area-inset-bottom)); color: #cbd5e1; text-align: center; font-size: 12px; line-height: 1.5; }
+    .scan-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:11px; }
+    .scan-actions button, .manual-row button { border:0; border-radius:11px; min-height:46px; color:white; background:var(--blue); font-weight:800; }
+    .scan-actions .photo-scan-btn { background:#0e7490; }
+    .manual-row { display: flex; gap: 8px; margin-top: 10px; }
+    .manual-row input { background: #fff; color: #111827; min-width:0; }
+    .manual-row button { min-width:80px; }
+    .barcode-preview { display:none; width:100%; max-height:180px; object-fit:contain; margin-top:10px; border-radius:10px; background:#fff; }
+    .photo-box input[type=file] { display:none; }
+    .photo-trigger { width:100%; min-height:114px; border:0; background:transparent; color:inherit; cursor:pointer; }
+    @media (max-width:390px) { .scan-actions { grid-template-columns:1fr; } }
+    .toast {
+      position: fixed; z-index: 200; left: 50%; bottom: 90px; transform: translate(-50%, 18px);
+      opacity: 0; pointer-events: none; width: calc(100% - 32px); max-width: 520px;
+      color: white; background: #111827; border-radius: 13px; padding: 13px 15px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25); transition: .22s; font-size: 13px;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.success { background: #166534; }
+    .toast.error { background: #991b1b; }
+    .success-overlay { position: fixed; inset: 0; z-index: 110; background: rgba(2,6,23,.72); display: none; align-items: center; justify-content: center; padding: 24px; }
+    .success-overlay.open { display: flex; }
+    .success-card { width: 100%; max-width: 380px; background: white; border-radius: 22px; padding: 25px; text-align: center; box-shadow: var(--shadow); }
+    .check { width: 62px; height: 62px; margin: 0 auto 13px; border-radius: 50%; display: grid; place-items: center; color: white; background: var(--green); font-size: 30px; }
+    .success-card h2 { margin: 0 0 5px; font-size: 20px; }
+    .success-card p { margin: 0 0 17px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .success-card button { width: 100%; min-height: 46px; border: 0; border-radius: 12px; background: var(--navy); color: white; font-weight: 900; }
+    @media (max-width: 390px) { .grid { grid-template-columns: 1fr; gap: 0; } .chips { grid-template-columns: repeat(2,1fr); } .sync-pill span { display: none; } }
+    @media (min-width: 721px) { body { padding: 18px 0; } .app { border-radius: 24px; overflow: hidden; box-shadow: 0 22px 60px rgba(15,23,42,.15); background: var(--canvas); min-height: calc(100vh - 36px); } .bottom-nav { bottom: 18px; border-radius: 0 0 24px 24px; } .modal { align-items: center; } .modal-sheet { border-radius: 22px; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="top-row">
+      <div class="brand">
+        <div class="brand-mark">PF</div>
+        <div><h1>PF Issue Logger</h1><p>NPI Line Issue Recording</p></div>
+      </div>
+      <div class="sync-pill" id="syncPill"><span class="dot"></span><span>本機已儲存</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="view active" id="view-entry">
+      <div class="content">
+        <div class="hero">
+          <div class="hero-label">Quick Capture</div>
+          <h2>掃描 PF 條碼</h2>
+          <p>支援手機相機掃描一維條碼，也可手動輸入</p>
+          <button class="scan-btn" type="button" data-open-scanner>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h3M21 5a2 2 0 0 0-2-2h-3M3 19a2 2 0 0 0 2 2h3M21 19a2 2 0 0 1-2 2h-3M7 8v8M10 8v8M14 8v8M17 8v8"/></svg>
+            開啟相機掃碼
+          </button>
+        </div>
+
+        <form id="issueForm" novalidate>
+          <div class="card">
+            <div class="section-head"><h2 class="section-title">設備資訊</h2><span class="required-note"><span class="req">*</span> 必填</span></div>
+            <div class="field">
+              <label for="pfCode">PF Code <span class="req">*</span></label>
+              <div class="pf-wrap">
+                <input id="pfCode" name="pfCode" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="例如：PF5YV61F" required />
+                <button class="mini-scan" type="button" aria-label="掃描 PF Code" data-open-scanner>▥</button>
+              </div>
+            </div>
+            <div class="grid">
+              <div class="field"><label for="project">Project <span class="req">*</span></label><input id="project" name="project" list="projectOptions" placeholder="例如：T14 Gen8" required /><datalist id="projectOptions"><option>T14 Gen8</option><option>T16 Gen6</option><option>MDP2</option><option>MD2</option></datalist></div>
+              <div class="field"><label for="stage">Stage <span class="req">*</span></label><select id="stage" name="stage" required><option value="">請選擇</option><option>EVT</option><option>FVT</option><option>SIT</option><option>SVT</option><option>MP</option></select></div>
+              <div class="field"><label for="station">Station <span class="req">*</span></label><select id="station" name="station" required><option value="">請選擇</option><option>SUB</option><option>STRU</option><option>AFT</option><option>Runin</option><option>問題點</option><option>SWDL</option><option>OBE</option><option>Noise</option></select></div>
+              <div class="field"><label for="owner">Owner</label><input id="owner" name="owner" maxlength="80" placeholder="手動輸入 Owner" autocomplete="off" /></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-head"><h2 class="section-title">Issue 內容</h2></div>
+            <div class="field">
+              <label>Category <span class="req">*</span></label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="category" value="Design" required><span>Design</span></label>
+                <label class="chip"><input type="radio" name="category" value="Material"><span>Material</span></label>
+                <label class="chip"><input type="radio" name="category" value="Process"><span>Process</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Severity <span class="req">*</span></label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="severity" value="High" required><span>High</span></label>
+                <label class="chip"><input type="radio" name="severity" value="Mid" checked><span>Mid</span></label>
+                <label class="chip"><input type="radio" name="severity" value="Low"><span>Low</span></label>
+              </div>
+            </div>
+            <div class="field"><label for="symptom">Failure Symptom <span class="req">*</span></label><textarea id="symptom" name="symptom" maxlength="500" placeholder="描述看到的現象，例如：RJ45 無法順利插入" required></textarea></div>
+            <div class="field"><label for="action">Immediate Action</label><textarea id="action" name="action" maxlength="500" placeholder="現場立即處置，例如：Hold unit / 更換 cable 重測"></textarea></div>
+          </div>
+
+          <div class="card">
+            <div class="section-head"><h2 class="section-title">照片與狀態</h2></div>
+            <div class="field">
+              <label>Issue Photo</label>
+              <div class="photo-box" id="photoBox">
+                <button class="photo-trigger" type="button" id="takeIssuePhoto"><span id="photoPrompt"><span style="font-size:30px;display:block">📷</span><strong>拍照或選擇照片</strong><span style="font-size:11px;display:block">自動壓縮後儲存在本機</span></span></button>
+                <img class="photo-preview" id="photoPreview" alt="Issue 預覽照片" />
+                <input type="file" id="photoInput" accept="image/*" capture="environment" aria-label="拍照或選擇照片" />
+                <div class="photo-actions" id="photoActions"><button type="button" id="removePhoto">移除照片</button></div>
+              </div>
+            </div>
+            <div class="grid">
+              <div class="field"><label for="status">Status</label><select id="status" name="status"><option>Open</option><option>Tracking</option><option>Closed</option></select></div>
+              <div class="field"><label for="reporter">Reporter</label><input id="reporter" name="reporter" value="Benson" /></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <button class="submit-btn" id="submitBtn" type="submit">Submit Issue</button>
+            <p class="helper">送出後先保存在此手機；可於「紀錄」匯出 CSV</p>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="view" id="view-history">
+      <div class="content">
+        <div class="summary">
+          <div class="metric"><strong id="metricTotal">0</strong><span>全部</span></div>
+          <div class="metric"><strong id="metricOpen" style="color:var(--red)">0</strong><span>Open</span></div>
+          <div class="metric"><strong id="metricClosed" style="color:var(--green)">0</strong><span>Closed</span></div>
+        </div>
+        <div class="card">
+          <div class="section-head"><h2 class="section-title">Issue 紀錄</h2><button class="secondary-btn" type="button" id="exportCsv">匯出 CSV</button></div>
+          <div class="toolbar"><input type="search" id="historySearch" placeholder="搜尋 PF、Project、Issue…" /></div>
+          <div class="record-list" id="recordList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="content">
+        <div class="card">
+          <div class="section-head"><h2 class="section-title">設定與資料</h2></div>
+          <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
+          <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
+          <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v2.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>相機模式：即時掃描 + 拍攝條碼照片備援</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="主要導覽">
+    <button class="nav-btn active" type="button" data-view="entry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>登錄</button>
+    <button class="nav-btn" type="button" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>紀錄</button>
+    <button class="nav-btn" type="button" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15z"/></svg>設定</button>
+  </nav>
+</div>
+
+<div class="modal" id="scannerModal" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
+  <div class="modal-sheet">
+    <div class="modal-head"><h2 id="scannerTitle">掃描 PF 一維條碼</h2><button class="icon-btn" type="button" id="closeScanner" aria-label="關閉">×</button></div>
+    <p class="scanner-status" id="scannerStatus">準備開啟後鏡頭…</p>
+    <div id="reader"><div style="padding:35px 18px;color:#94a3b8;text-align:center">相機畫面將顯示在這裡</div></div>
+    <div class="scan-guide">
+      將條碼水平置於畫面中央並保持穩定；掃描成功後會自動帶入 PF Code。
+      <div class="scan-actions">
+        <button type="button" id="retryLiveScan">重新開啟即時掃描</button>
+        <button class="photo-scan-btn" type="button" id="scanBarcodePhoto">📷 拍攝條碼辨識</button>
+      </div>
+      <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment" hidden />
+      <img class="barcode-preview" id="barcodePreview" alt="拍攝的條碼照片" />
+      <div class="manual-row"><input id="manualPf" placeholder="辨識失敗時可手動輸入 PF Code" autocapitalize="characters" autocomplete="off" /><button type="button" id="useManualPf">帶入</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card"><div class="check">✓</div><h2>Issue 已記錄</h2><p id="successText"></p><button type="button" id="successDone">完成</button></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'pfIssueLogger.records.v1';
+  const SETTINGS_KEY = 'pfIssueLogger.settings.v1';
+  let records = safeParse(localStorage.getItem(STORAGE_KEY), []);
+  let settings = safeParse(localStorage.getItem(SETTINGS_KEY), { reporter: 'Benson' });
+  let photoData = '';
+  let scanner = null;
+  let scannerRunning = false;
+  let nativeStream = null;
+  let nativeFrame = 0;
+  let scanningBusy = false;
+  let scannerLibPromise = null;
+  const BARCODE_FORMATS = ['code_128','code_39','code_93','codabar','ean_13','ean_8','itf','upc_a','upc_e'];
+  const SCANNER_CDNS = [
+    'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'
+  ];
+
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  const form = $('#issueForm');
+  const pfInput = $('#pfCode');
+  const toast = $('#toast');
+
+  function safeParse(value, fallback) { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } }
+  function esc(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function uid() { return 'PFI-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); }
+  function nowText(iso) { return new Intl.DateTimeFormat('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso)); }
+  function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); updateMetrics(); }
+  function showToast(message, type='') { toast.textContent = message; toast.className = 'toast show ' + type; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.className = 'toast', 3200); }
+  function normalizePf(value) { return value.trim().toUpperCase().replace(/\s+/g, ''); }
+  function setScannerStatus(text, kind='') {
+    const el=$('#scannerStatus'); el.textContent=text;
+    el.style.color=kind==='error'?'#fecaca':kind==='ok'?'#bbf7d0':'#bfdbfe';
+  }
+  function renderReaderMessage(text) { $('#reader').innerHTML='<div style="padding:35px 18px;color:#94a3b8;text-align:center">'+esc(text)+'</div>'; }
+
+  function switchView(name) {
+    $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    if (name === 'history') renderRecords();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+  $$('[data-open-scanner]').forEach(btn => btn.addEventListener('click', openScanner));
+  $('#closeScanner').addEventListener('click', closeScanner);
+  $('#scannerModal').addEventListener('click', e => { if (e.target.id === 'scannerModal') closeScanner(); });
+  $('#retryLiveScan').addEventListener('click', startLiveScanner);
+
+  function loadScript(url) {
+    return new Promise((resolve,reject) => {
+      const script=document.createElement('script');
+      script.src=url; script.async=true; script.crossOrigin='anonymous';
+      script.onload=resolve; script.onerror=()=>{ script.remove(); reject(new Error('load failed')); };
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureScannerLibrary() {
+    if (window.Html5Qrcode) return true;
+    if (scannerLibPromise) return scannerLibPromise;
+    scannerLibPromise=(async()=>{
+      for (const url of SCANNER_CDNS) {
+        try { await loadScript(url); if (window.Html5Qrcode) return true; } catch (_) {}
+      }
+      return false;
+    })();
+    const ok=await scannerLibPromise;
+    if (!ok) scannerLibPromise=null;
+    return ok;
+  }
+
+  async function openScanner() {
+    $('#scannerModal').classList.add('open');
+    document.body.style.overflow='hidden';
+    $('#barcodePreview').style.display='none';
+    await startLiveScanner();
+  }
+
+  async function startLiveScanner() {
+    await stopAllScanners(false);
+    if (!window.isSecureContext && location.hostname !== 'localhost') {
+      setScannerStatus('此執行環境不允許即時相機；請改用「拍攝條碼辨識」。','error');
+      renderReaderMessage('即時相機需要 HTTPS。下方拍照備援仍可使用。');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setScannerStatus('瀏覽器未提供即時相機介面；請使用拍照備援。','error');
+      renderReaderMessage('請點「拍攝條碼辨識」開啟手機相機。');
+      return;
+    }
+    setScannerStatus('正在啟動後鏡頭…');
+    if ('BarcodeDetector' in window) {
+      try {
+        const supported=BarcodeDetector.getSupportedFormats ? await BarcodeDetector.getSupportedFormats() : BARCODE_FORMATS;
+        const formats=BARCODE_FORMATS.filter(f=>supported.includes(f));
+        if (formats.length) { await startNativeScanner(formats); return; }
+      } catch (_) { await stopNativeScanner(); }
+    }
+    setScannerStatus('正在載入 iPhone/Android 相容掃碼元件…');
+    const loaded=await ensureScannerLibrary();
+    if (!loaded) {
+      setScannerStatus('掃碼元件無法載入；請改用拍照備援或手動輸入。','error');
+      renderReaderMessage('公司網路可能阻擋掃碼元件。拍照後仍可保留照片並手動帶入 PF。');
+      return;
+    }
+    try { await startHtml5Scanner(); }
+    catch (err) {
+      setScannerStatus(cameraErrorText(err),'error');
+      renderReaderMessage('請確認 Safari/Chrome 的相機權限，或使用下方拍照備援。');
+    }
+  }
+
+  async function startNativeScanner(formats) {
+    const video=document.createElement('video');
+    video.id='nativeScannerVideo'; video.setAttribute('playsinline',''); video.muted=true; video.autoplay=true;
+    const line=document.createElement('div'); line.className='scan-line';
+    const host=$('#reader'); host.innerHTML=''; host.append(video,line);
+    nativeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+    video.srcObject=nativeStream; await video.play();
+    const detector=new BarcodeDetector({formats});
+    scannerRunning=true; setScannerStatus('即時掃描中：請將 PF 一維條碼水平放入畫面中央','ok');
+    const detect=async()=>{
+      if (!scannerRunning || !nativeStream) return;
+      if (!scanningBusy && video.readyState>=2) {
+        scanningBusy=true;
+        try {
+          const found=await detector.detect(video);
+          if (found?.length) { setPfFromScan(found[0].rawValue); return; }
+        } catch (_) {}
+        finally { scanningBusy=false; }
+      }
+      nativeFrame=requestAnimationFrame(detect);
+    };
+    detect();
+  }
+
+  function html5Formats() {
+    const f=window.Html5QrcodeSupportedFormats;
+    return [f.CODE_128,f.CODE_39,f.CODE_93,f.CODABAR,f.EAN_13,f.EAN_8,f.ITF,f.UPC_A,f.UPC_E].filter(v=>v!==undefined);
+  }
+
+  async function startHtml5Scanner() {
+    renderReaderMessage('正在請求相機權限…');
+    $('#reader').innerHTML='';
+    scanner=new Html5Qrcode('reader',{formatsToSupport:html5Formats(),verbose:false});
+    const config={fps:12,qrbox:{width:Math.min(330,window.innerWidth-44),height:130},aspectRatio:1.45,disableFlip:false,videoConstraints:{facingMode:{ideal:'environment'}}};
+    await scanner.start({facingMode:'environment'},config,decoded=>setPfFromScan(decoded),()=>{});
+    scannerRunning=true; setScannerStatus('即時掃描中：請將 PF 一維條碼水平放入畫面中央','ok');
+  }
+
+  function cameraErrorText(err) {
+    const n=String(err?.name||err||'');
+    if (/NotAllowed|Permission|denied/i.test(n)) return '相機權限遭拒；請允許相機，或改用拍照備援。';
+    if (/NotFound|DevicesNotFound/i.test(n)) return '找不到可用相機；請改用拍照備援。';
+    if (/NotReadable|TrackStart/i.test(n)) return '相機正被其他 App 使用；請關閉其他相機後重試。';
+    return '無法啟動即時相機；請改用拍照備援。';
+  }
+
+  $('#scanBarcodePhoto').addEventListener('click', () => $('#barcodePhotoInput').click());
+  $('#barcodePhotoInput').addEventListener('change', async e => {
+    const file=e.target.files?.[0]; if (!file) return;
+    await stopAllScanners(false);
+    const preview=$('#barcodePreview');
+    if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
+    preview.dataset.url=URL.createObjectURL(file); preview.src=preview.dataset.url; preview.style.display='block';
+    setScannerStatus('正在辨識拍攝的條碼照片…');
+    let decoded='';
+    if ('BarcodeDetector' in window) {
+      try {
+        const supported=BarcodeDetector.getSupportedFormats ? await BarcodeDetector.getSupportedFormats() : BARCODE_FORMATS;
+        const formats=BARCODE_FORMATS.filter(f=>supported.includes(f));
+        if (formats.length) {
+          const bitmap=await createImageBitmap(file);
+          const result=await new BarcodeDetector({formats}).detect(bitmap);
+          bitmap.close?.(); decoded=result?.[0]?.rawValue||'';
+        }
+      } catch (_) {}
+    }
+    if (!decoded && await ensureScannerLibrary()) {
+      try {
+        renderReaderMessage('正在分析條碼照片…');
+        $('#reader').innerHTML='';
+        const fileScanner=new Html5Qrcode('reader',{formatsToSupport:html5Formats(),verbose:false});
+        decoded=await fileScanner.scanFile(file,false);
+        try { await fileScanner.clear(); } catch (_) {}
+      } catch (_) {}
+    }
+    if (decoded) setPfFromScan(decoded);
+    else {
+      setScannerStatus('未自動辨識；照片已保留，請依照片手動輸入 PF Code。','error');
+      $('#manualPf').focus();
+    }
+    e.target.value='';
+  });
+
+  async function stopNativeScanner() {
+    cancelAnimationFrame(nativeFrame); nativeFrame=0; scanningBusy=false;
+    nativeStream?.getTracks().forEach(t=>t.stop()); nativeStream=null;
+    const video=$('#nativeScannerVideo'); if (video) { video.srcObject=null; video.remove(); }
+  }
+
+  async function stopAllScanners(resetReader=true) {
+    if (scanner) {
+      try { if (scannerRunning) await scanner.stop(); } catch (_) {}
+      try { await scanner.clear(); } catch (_) {}
+      scanner=null;
+    }
+    await stopNativeScanner(); scannerRunning=false;
+    if (resetReader) renderReaderMessage('相機畫面將顯示在這裡');
+  }
+
+  async function closeScanner() {
+    await stopAllScanners();
+    $('#scannerModal').classList.remove('open');
+    document.body.style.overflow='';
+  }
+
+  function setPfFromScan(value) {
+    const pf=normalizePf(value); if (!pf) return;
+    pfInput.value=pf; navigator.vibrate?.(100);
+    closeScanner(); showToast('已掃描：'+pf,'success');
+  }
+
+  $('#useManualPf').addEventListener('click', () => {
+    const value=normalizePf($('#manualPf').value);
+    if (!value) return showToast('請輸入 PF Code','error');
+    pfInput.value=value; closeScanner(); showToast('已帶入：'+value,'success');
+  });
+
+  pfInput.addEventListener('input', () => { const pos = pfInput.selectionStart; pfInput.value = pfInput.value.toUpperCase(); try { pfInput.setSelectionRange(pos, pos); } catch (_) {} });
+
+  $('#takeIssuePhoto').addEventListener('click', () => $('#photoInput').click());
+  $('#photoInput').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return showToast('請選擇圖片檔案', 'error');
+    if (file.size > 15 * 1024 * 1024) return showToast('照片超過 15MB，請改用較小圖片', 'error');
+    try {
+      photoData = await compressImage(file, 1000, .72);
+      $('#photoPreview').src = photoData;
+      $('#photoPreview').style.display = 'block';
+      $('#photoPrompt').style.display = 'none';
+      $('#takeIssuePhoto').style.display = 'none';
+      $('#photoActions').style.display = 'block';
+    } catch { showToast('照片處理失敗，請重新拍攝', 'error'); }
+  });
+
+  function compressImage(file, maxSide, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (Math.max(w,h) > maxSide) { const r = maxSide / Math.max(w,h); w = Math.round(w*r); h = Math.round(h*r); }
+        const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url); resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject; img.src = url;
+    });
+  }
+
+  function clearPhoto() {
+    photoData = ''; $('#photoPreview').src = ''; $('#photoPreview').style.display = 'none';
+    $('#photoPrompt').style.display = 'block'; $('#takeIssuePhoto').style.display = 'block';
+    $('#photoActions').style.display = 'none'; $('#photoInput').value = '';
+  }
+  $('#removePhoto').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); clearPhoto(); });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    pfInput.value = normalizePf(pfInput.value);
+    if (!form.reportValidity()) { showToast('請完成所有必填欄位', 'error'); return; }
+    const data = new FormData(form);
+    const record = {
+      id: uid(), createdAt: new Date().toISOString(), pfCode: data.get('pfCode'), project: data.get('project').trim(),
+      stage: data.get('stage'), station: data.get('station'), category: data.get('category'), severity: data.get('severity'),
+      symptom: data.get('symptom').trim(), action: data.get('action').trim(), owner: data.get('owner'), status: data.get('status'),
+      reporter: data.get('reporter').trim() || settings.reporter, photo: photoData
+    };
+    records.unshift(record);
+    try { saveRecords(); }
+    catch (err) { records.shift(); showToast('本機儲存空間不足，請先匯出並清理舊紀錄。', 'error'); return; }
+    $('#successText').innerHTML = '<strong>' + esc(record.pfCode) + '</strong><br>' + esc(record.station + ' / ' + record.category) + '<br>' + esc(nowText(record.createdAt) + ' / ' + record.reporter);
+    $('#successOverlay').classList.add('open');
+    const keep = { project: record.project, stage: record.stage, station: record.station, reporter: record.reporter };
+    form.reset(); clearPhoto();
+    $('#project').value = keep.project; $('#stage').value = keep.stage; $('#station').value = keep.station; $('#reporter').value = keep.reporter;
+    form.querySelector('[name="severity"][value="Mid"]').checked = true;
+  });
+
+  $('#successDone').addEventListener('click', () => { $('#successOverlay').classList.remove('open'); pfInput.focus(); });
+
+  function updateMetrics() {
+    $('#metricTotal').textContent = records.length;
+    $('#metricOpen').textContent = records.filter(r => r.status === 'Open').length;
+    $('#metricClosed').textContent = records.filter(r => r.status === 'Closed').length;
+  }
+
+  function renderRecords() {
+    const term = $('#historySearch').value.trim().toLowerCase();
+    const filtered = records.filter(r => [r.pfCode,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.owner,r.status,r.reporter].join(' ').toLowerCase().includes(term));
+    const list = $('#recordList');
+    if (!filtered.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><strong>' + (records.length ? '找不到符合的紀錄' : '尚無 Issue 紀錄') + '</strong><div style="font-size:12px;margin-top:6px">' + (records.length ? '請調整搜尋條件' : '掃描 PF 後建立第一筆資料') + '</div></div>'; return; }
+    list.innerHTML = filtered.map(r => {
+      const cls = String(r.status).toLowerCase();
+      return '<article class="record"><div class="record-main"><div><div class="record-pf">' + esc(r.pfCode) + '</div><div class="record-meta">' + esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · ')) + '</div><div class="record-issue">' + esc(r.symptom) + '</div></div><div><span class="badge ' + esc(cls) + '">' + esc(r.status) + '</span></div></div><div class="record-footer"><span>' + esc(nowText(r.createdAt)) + ' · ' + esc(r.reporter || '-') + (r.photo ? ' · 📷' : '') + '</span><button type="button" data-delete="' + esc(r.id) + '">刪除</button></div></article>';
+    }).join('');
+  }
+
+  $('#historySearch').addEventListener('input', renderRecords);
+  $('#recordList').addEventListener('click', e => {
+    const id = e.target.dataset.delete; if (!id) return;
+    if (!confirm('確定刪除這筆 Issue 紀錄？')) return;
+    records = records.filter(r => r.id !== id); saveRecords(); renderRecords(); showToast('紀錄已刪除');
+  });
+
+  function csvCell(v) { return '"' + String(v ?? '').replace(/"/g, '""') + '"'; }
+  $('#exportCsv').addEventListener('click', () => {
+    if (!records.length) return showToast('目前沒有可匯出的紀錄', 'error');
+    const cols = ['ID','Created At','PF Code','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
+    const rows = records.map(r => [r.id,r.createdAt,r.pfCode,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
+    download('\ufeff' + [cols, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n'), 'pf-issues-' + dateStamp() + '.csv', 'text/csv;charset=utf-8');
+    showToast('CSV 已匯出', 'success');
+  });
+
+  $('#exportJson').addEventListener('click', () => {
+    download(JSON.stringify({version:1, exportedAt:new Date().toISOString(), records}, null, 2), 'pf-issues-backup-' + dateStamp() + '.json', 'application/json');
+    showToast('JSON 備份已匯出', 'success');
+  });
+  $('#importJsonBtn').addEventListener('click', () => $('#importJsonInput').click());
+  $('#importJsonInput').addEventListener('change', async e => {
+    const file = e.target.files?.[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!Array.isArray(data.records)) throw new Error('invalid');
+      if (!confirm('將匯入 ' + data.records.length + ' 筆紀錄並取代目前資料，確定繼續？')) return;
+      records = data.records; saveRecords(); renderRecords(); showToast('資料已還原', 'success');
+    } catch { showToast('JSON 備份格式不正確', 'error'); }
+    e.target.value = '';
+  });
+
+  $('#clearAll').addEventListener('click', () => {
+    if (!records.length) return showToast('目前沒有資料');
+    if (!confirm('確定永久刪除全部 ' + records.length + ' 筆紀錄？建議先匯出備份。')) return;
+    records = []; saveRecords(); renderRecords(); showToast('全部紀錄已清除');
+  });
+
+  $('#defaultReporter').value = settings.reporter || 'Benson';
+  $('#reporter').value = settings.reporter || 'Benson';
+  $('#defaultReporter').addEventListener('change', e => {
+    settings.reporter = e.target.value.trim() || 'Benson'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); $('#reporter').value = settings.reporter; showToast('預設填寫人已更新', 'success');
+  });
+
+  function dateStamp() { const d = new Date(); return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); }
+  function download(content, name, type) { const blob = new Blob([content], {type}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
+
+  updateMetrics(); renderRecords();
+})();
+</script>
+</body>
+</html>
