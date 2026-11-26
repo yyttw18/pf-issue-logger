@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v3</title>
+  <title>PF Issue Logger Mobile v3.1</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -384,7 +384,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.1<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
         </div>
       </div>
     </section>
@@ -437,6 +437,8 @@
   let ocrLibPromise = null;
   let captureMeta = { method: 'Manual', ocrText: '', labelType: '', labelDate: '' };
   let pendingOcrMeta = null;
+  let ocrAwaitingConfirmation = false;
+  let pfBeforeOcr = '';
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -571,6 +573,7 @@
 
   async function handleLabelPhoto(e) {
     const file=e.target.files?.[0]; if (!file) return;
+    pfBeforeOcr=pfInput.value; ocrAwaitingConfirmation=false; pendingOcrMeta=null;
     const panel=$('#labelOcrPanel'); panel.hidden=false; $('#ocrResult').hidden=true; $('#ocrProgress').hidden=false;
     $('#ocrBadge').textContent='辨識中'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
     const preview=$('#labelPreview'); if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
@@ -601,9 +604,18 @@
     $('#ocrProgress').hidden=true; $('#ocrResult').hidden=false; $('#confirmedPf').value=parsed.pf||'';
     $('#ocrRawText').textContent=parsed.raw||'（沒有取得辨識文字）';
     $('#detectedType').textContent='TYPE：'+(parsed.type||'—'); $('#detectedDate').textContent='日期：'+(parsed.date||'—');
-    $('#ocrConfidence').textContent=(parsed.source==='sn'?'高可信度：取自 S/N 後方。':parsed.source==='pf'?'候選結果：取自 PF 開頭文字。':'需要人工輸入／修正。')+' '+message;
-    $('#ocrBadge').textContent=parsed.pf?'待確認':'需修正'; $('#ocrBadge').style.background=parsed.pf?'#dcfce7':'#fee2e2'; $('#ocrBadge').style.color=parsed.pf?'#166534':'#991b1b';
     pendingOcrMeta={method:'Label OCR',ocrText:parsed.raw||'',labelType:parsed.type||'',labelDate:parsed.date||''};
+    if (parsed.pf) {
+      pfInput.value=parsed.pf;
+      ocrAwaitingConfirmation=true;
+      $('#ocrConfidence').textContent=(parsed.source==='sn'?'已優先從 S/N 後方擷取。':'已從 PF 開頭文字擷取。')+' 已自動填入 PF Code；請檢查、修正並按「確認並帶入」。';
+      $('#ocrBadge').textContent='已自動填入・待確認'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
+      showToast('OCR 已自動填入：'+parsed.pf+'，請確認或修正','success');
+    } else {
+      ocrAwaitingConfirmation=true;
+      $('#ocrConfidence').textContent='未自動找到 PF Code。請依照片或辨識文字輸入後，再按「確認並帶入」。 '+message;
+      $('#ocrBadge').textContent='需輸入確認'; $('#ocrBadge').style.background='#fee2e2'; $('#ocrBadge').style.color='#991b1b';
+    }
     $('#confirmedPf').focus();
   }
 
@@ -611,12 +623,15 @@
     const value=canonicalPf($('#confirmedPf').value)||normalizePf($('#confirmedPf').value);
     if (!value || !/^PF-?[A-Z0-9]{5,14}$/.test(value)) return showToast('請確認 PF Code 格式，例如 PF-5AF8KA','error');
     captureMeta=pendingOcrMeta||{method:'Label OCR',ocrText:'',labelType:'',labelDate:''}; pendingOcrMeta=null;
+    ocrAwaitingConfirmation=false; pfBeforeOcr='';
     pfInput.value=value; $('#labelOcrPanel').hidden=true; navigator.vibrate?.(80);
     pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已確認並帶入：'+value,'success');
   }
 
   function resetOcrPanel() {
-    pendingOcrMeta=null; $('#labelOcrPanel').hidden=true; $('#ocrResult').hidden=true; $('#labelOcrFile').value='';
+    if (ocrAwaitingConfirmation) pfInput.value=pfBeforeOcr;
+    pendingOcrMeta=null; ocrAwaitingConfirmation=false; pfBeforeOcr='';
+    $('#labelOcrPanel').hidden=true; $('#ocrResult').hidden=true; $('#labelOcrFile').value='';
   }
 
   async function ensureScannerLibrary() {
@@ -834,6 +849,12 @@
 
   form.addEventListener('submit', e => {
     e.preventDefault();
+    if (ocrAwaitingConfirmation) {
+      $('#labelOcrPanel').scrollIntoView({behavior:'smooth',block:'start'});
+      showToast('請先確認或修正 OCR 辨識的 PF Code','error');
+      $('#confirmedPf').focus();
+      return;
+    }
     pfInput.value = normalizePf(pfInput.value);
     if (!form.reportValidity()) { showToast('請完成所有必填欄位', 'error'); return; }
     const data = new FormData(form);
@@ -850,7 +871,7 @@
     $('#successText').innerHTML = '<strong>' + esc(record.pfCode) + '</strong><br>' + esc(record.station + ' / ' + record.category) + '<br>' + esc(nowText(record.createdAt) + ' / ' + record.reporter);
     $('#successOverlay').classList.add('open');
     const keep = { project: record.project, stage: record.stage, station: record.station, reporter: record.reporter };
-    form.reset(); clearPhoto(); captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
+    form.reset(); clearPhoto(); captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''}; ocrAwaitingConfirmation=false; pendingOcrMeta=null; pfBeforeOcr='';
     $('#project').value = keep.project; $('#stage').value = keep.stage; $('#station').value = keep.station; $('#reporter').value = keep.reporter;
     form.querySelector('[name="severity"][value="Mid"]').checked = true;
   });
