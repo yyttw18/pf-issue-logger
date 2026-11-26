@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v4.1</title>
+  <title>PF Issue Logger Mobile v4.2</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -316,6 +316,12 @@
     .draft-pf-item button { border:0; border-radius:8px; padding:7px 8px; color:#b91c1c; background:#fee2e2; font-size:10px; font-weight:900; }
     .pf-list-helper { margin:10px 0 0; text-align:center; color:#64748b; font-size:10px; }
     .export-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+
+    .export-actions { grid-template-columns:1fr 1fr; }
+    .excel-export-btn { grid-column:1/-1; min-height:48px; border:0; border-radius:11px; color:white; background:linear-gradient(135deg,#107c41,#21a366); font-weight:900; box-shadow:0 6px 16px rgba(16,124,65,.22); }
+    .excel-export-btn:disabled { opacity:.58; box-shadow:none; }
+    @media (max-width:390px) { .excel-export-btn { grid-column:auto; } }
+
     .record-group { font-weight:900; color:#1d4ed8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
     .history-pf-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
     .history-pf { padding:4px 7px; border-radius:7px; color:#334155; background:#f1f5f9; font-size:9px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -484,7 +490,7 @@
         </div>
         <div class="card">
           <div class="section-head"><h2 class="section-title">Issue Group 紀錄</h2></div>
-          <div class="export-actions"><button class="secondary-btn" type="button" id="exportGroupCsv">匯出：一列一 Issue</button><button class="secondary-btn" type="button" id="exportPfCsv">匯出：一列一 PF</button></div>
+          <div class="export-actions"><button class="excel-export-btn" type="button" id="exportExcel">匯出 Excel（含照片）</button><button class="secondary-btn" type="button" id="exportGroupCsv">匯出：一列一 Issue</button><button class="secondary-btn" type="button" id="exportPfCsv">匯出：一列一 PF</button></div>
           <div class="toolbar"><input type="search" id="historySearch" placeholder="搜尋 Group ID、PF、Project、Issue…" /></div>
           <div class="record-list" id="recordList"></div>
         </div>
@@ -498,7 +504,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v4.1<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>資料模型：一筆 Issue Group 對應多個 PF Code<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入<br>CSV：一列一 Issue／一列一 PF 兩種視圖</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v4.2<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>資料模型：一筆 Issue Group 對應多個 PF Code<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入<br>CSV：一列一 Issue／一列一 PF 兩種視圖<br>Excel：3 個工作表＋嵌入照片縮圖</p></div>
         </div>
       </div>
     </section>
@@ -578,6 +584,7 @@
   let draftPhotos = [];
   let photoViewerState = {photos:[],index:0,groupId:'',primaryPf:''};
   let zipLibPromise = null;
+  let excelLibPromise = null;
   let scanner = null;
   let scannerRunning = false;
   let nativeStream = null;
@@ -606,6 +613,11 @@
   let lastBarcodeAt = 0;
   let draftPfCodes = [];
   let draftGroupId = newGroupId();
+  const EXCEL_CDNS = [
+    'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+    'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'
+  ];
   const ZIP_CDNS = [
     'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
     'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
@@ -1316,6 +1328,48 @@
     const rows=records.flatMap(r=>r.pfCodes.map((p,i)=>[r.groupId,i+1,p.code,p.source,p.rawValue||'',p.format||'',p.labelType||'',p.labelDate||'',p.ocrRisk||'',p.addedAt||'',r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,(r.photos||[]).length]));
     download('\ufeff'+[cols,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n'),'pf-issues-pf-view-'+dateStamp()+'.csv','text/csv;charset=utf-8');showToast('已匯出一列一 PF 視圖','success');
   });
+
+  async function ensureExcelLibrary(){
+    if(window.ExcelJS)return true;if(excelLibPromise)return excelLibPromise;
+    excelLibPromise=(async()=>{for(const url of EXCEL_CDNS){try{await loadScript(url);if(window.ExcelJS)return true}catch(_){}}return false})();
+    const ok=await excelLibPromise;if(!ok)excelLibPromise=null;return ok;
+  }
+  function excelText(v){return v===null||v===undefined?'':String(v)}
+  function excelDateText(iso){if(!iso)return'';try{return nowText(iso)}catch(_){return String(iso)}}
+  function excelColumns(ws,defs){ws.columns=defs.map(d=>({header:d.header,key:d.key,width:d.width}));ws.views=[{state:'frozen',ySplit:1,activeCell:'A2'}];ws.autoFilter={from:{row:1,column:1},to:{row:1,column:defs.length}};ws.getRow(1).height=27;ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'},size:10};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B1739'}};ws.getRow(1).alignment={vertical:'middle',horizontal:'center',wrapText:true};ws.getRow(1).eachCell(c=>{c.border={bottom:{style:'medium',color:{argb:'FF2563EB'}}}});ws.properties.defaultRowHeight=21}
+  function excelDecorateRows(ws,start=2){for(let r=start;r<=ws.rowCount;r++){const row=ws.getRow(r);row.alignment={vertical:'top',wrapText:true};if(r%2===0)row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};row.eachCell({includeEmpty:true},c=>{c.font={name:'Aptos',size:10,color:{argb:'FF172033'}}})}}
+  function imageExtension(dataUrl){return /^data:image\/png/i.test(dataUrl)?'png':'jpeg'}
+  function safeExcelImage(workbook,photo){try{return workbook.addImage({base64:photo.dataUrl,extension:imageExtension(photo.dataUrl)})}catch(_){return null}}
+  function buildIssueSummarySheet(workbook){
+    const ws=workbook.addWorksheet('Issue Summary',{properties:{tabColor:{argb:'FF107C41'}}});
+    const defs=[['Group ID','groupId',24],['Created At','createdAt',20],['PF Count','pfCount',10],['PF Codes','pfCodes',36],['Project','project',16],['Stage','stage',10],['Station','station',12],['Category','category',12],['Severity','severity',10],['Owner','owner',16],['Issue Description','issue',42],['Immediate Action','action',36],['Status','status',12],['Reporter','reporter',14],['Photo Count','photoCount',11]].map(x=>({header:x[0],key:x[1],width:x[2]}));
+    excelColumns(ws,defs);records.forEach(r=>ws.addRow({groupId:r.groupId,createdAt:excelDateText(r.createdAt),pfCount:(r.pfCodes||[]).length,pfCodes:(r.pfCodes||[]).map(p=>p.code).join('; '),project:r.project,stage:r.stage,station:r.station,category:r.category,severity:r.severity,owner:r.owner,issue:r.symptom,action:r.action,status:r.status,reporter:r.reporter,photoCount:(r.photos||[]).length}));
+    excelDecorateRows(ws);ws.getColumn('pfCount').alignment={horizontal:'center'};ws.getColumn('photoCount').alignment={horizontal:'center'};return ws;
+  }
+  function buildPfDetailSheet(workbook){
+    const ws=workbook.addWorksheet('PF Detail',{properties:{tabColor:{argb:'FF2563EB'}}});
+    const defs=[['Group ID','groupId',24],['PF Order','pfOrder',9],['PF Code','pfCode',18],['PF Source','pfSource',12],['Raw Barcode','raw',24],['Barcode Format','format',14],['Label TYPE','labelType',18],['Label Date','labelDate',12],['OCR Risk','ocrRisk',10],['PF Added At','addedAt',20],['Created At','createdAt',20],['Project','project',16],['Stage','stage',10],['Station','station',12],['Category','category',12],['Severity','severity',10],['Owner','owner',16],['Issue Description','issue',42],['Immediate Action','action',36],['Status','status',12],['Reporter','reporter',14],['Photo Count','photoCount',11]].map(x=>({header:x[0],key:x[1],width:x[2]}));
+    excelColumns(ws,defs);records.forEach(r=>(r.pfCodes||[]).forEach((p,i)=>ws.addRow({groupId:r.groupId,pfOrder:i+1,pfCode:p.code,pfSource:p.source,raw:p.rawValue||'',format:p.format||'',labelType:p.labelType||'',labelDate:p.labelDate||'',ocrRisk:p.ocrRisk||'',addedAt:excelDateText(p.addedAt),createdAt:excelDateText(r.createdAt),project:r.project,stage:r.stage,station:r.station,category:r.category,severity:r.severity,owner:r.owner,issue:r.symptom,action:r.action,status:r.status,reporter:r.reporter,photoCount:(r.photos||[]).length})));
+    excelDecorateRows(ws);return ws;
+  }
+  function buildPhotoGallerySheet(workbook){
+    const ws=workbook.addWorksheet('Photo Gallery',{properties:{tabColor:{argb:'FF7C3AED'}}});
+    const defs=[['Group ID','groupId',24],['PF Codes','pfCodes',36],['Photo #','photoNo',10],['Photo Time','photoTime',20],['Photo','photo',26]].map(x=>({header:x[0],key:x[1],width:x[2]}));
+    excelColumns(ws,defs);let rowNo=2;
+    records.forEach(r=>{const pfCodes=(r.pfCodes||[]).map(p=>p.code).join('; ');(r.photos||[]).forEach((photo,i)=>{const row=ws.addRow({groupId:r.groupId,pfCodes,photoNo:i+1,photoTime:excelDateText(photo.addedAt),photo:''});row.height=82;row.alignment={vertical:'middle',wrapText:true};if(rowNo%2===0)row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};const imageId=safeExcelImage(workbook,photo);if(imageId!==null)ws.addImage(imageId,{tl:{col:4.12,row:rowNo-0.92},ext:{width:150,height:98},editAs:'oneCell'});rowNo++})});
+    if(ws.rowCount===1){const row=ws.addRow({groupId:'No photos',pfCodes:'',photoNo:'',photoTime:'',photo:''});row.height=24}return ws;
+  }
+  async function exportExcelWorkbook(){
+    if(!records.length)return showToast('目前沒有可匯出的 Issue Group','error');
+    const btn=$('#exportExcel');btn.disabled=true;const old=btn.textContent;btn.textContent='正在建立 Excel（含照片）…';showToast('正在建立 Excel，照片較多時請稍候…');
+    try{
+      if(!await ensureExcelLibrary())throw new Error('Excel library unavailable');
+      const wb=new ExcelJS.Workbook();wb.creator='PF Issue Logger Mobile';wb.lastModifiedBy='PF Issue Logger Mobile';wb.created=new Date();wb.modified=new Date();wb.subject='Safe Launch / Weekly Report';wb.title='PF Issue Groups with embedded photos';
+      buildIssueSummarySheet(wb);buildPfDetailSheet(wb);buildPhotoGallerySheet(wb);
+      const buffer=await wb.xlsx.writeBuffer({useStyles:true,useSharedStrings:true});downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'PF-Issue-Logger-'+dateStamp()+'.xlsx');showToast('Excel（含照片）已匯出','success');
+    }catch(err){console.error(err);showToast('Excel 匯出失敗；請確認網路與手機可用記憶體後重試','error')}finally{btn.disabled=false;btn.textContent=old}
+  }
+  $('#exportExcel').addEventListener('click',exportExcelWorkbook);
 
   async function ensureZipLibrary(){if(window.JSZip)return true;if(zipLibPromise)return zipLibPromise;zipLibPromise=(async()=>{for(const url of ZIP_CDNS){try{await loadScript(url);if(window.JSZip)return true}catch(_){}}return false})();const ok=await zipLibPromise;if(!ok)zipLibPromise=null;return ok}
   function issueSummaryObject(r){const primary=r.pfCodes?.[0]?.code||'NO-PF';return{groupId:r.groupId,createdAt:r.createdAt,pfCount:(r.pfCodes||[]).length,pfCodes:r.pfCodes||[],project:r.project,stage:r.stage,station:r.station,category:r.category,severity:r.severity,failureSymptom:r.symptom,immediateAction:r.action,owner:r.owner,status:r.status,reporter:r.reporter,photoCount:(r.photos||[]).length,photos:(r.photos||[]).map((p,i)=>({order:i+1,addedAt:p.addedAt,fileName:photoFileName(r.groupId,primary,i,p)}))}}
