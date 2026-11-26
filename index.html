@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v3.1</title>
+  <title>PF Issue Logger Mobile v3.2</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -217,6 +217,22 @@
     .success-card p { margin: 0 0 17px; color: var(--muted); font-size: 13px; line-height: 1.6; }
     .success-card button { width: 100%; min-height: 46px; border: 0; border-radius: 12px; background: var(--navy); color: white; font-weight: 900; }
 
+
+    .vision-row { display:flex; align-items:center; justify-content:space-between; gap:9px; margin-top:10px; color:#475569; font-size:11px; }
+    .vision-row span { flex:1; }
+    .vision-row button { min-height:38px; white-space:nowrap; }
+    .processed-wrap { margin-top:10px; padding:8px; border-radius:11px; background:#0f172a; }
+    .processed-wrap span { display:block; margin-bottom:6px; color:#bfdbfe; font-size:10px; font-weight:800; }
+    .processed-wrap img { display:block; width:100%; max-height:180px; object-fit:contain; background:white; border-radius:7px; image-rendering:auto; }
+    .crop-retry-btn { width:100%; min-height:43px; margin-top:9px; border:1px dashed #38bdf8; border-radius:11px; color:#0369a1; background:#f0f9ff; font-weight:900; font-size:12px; }
+    .crop-modal { align-items:flex-end; }
+    .crop-sheet { max-height:94vh; }
+    .crop-help { margin:0; padding:0 16px 10px; color:#cbd5e1; font-size:12px; line-height:1.5; }
+    .crop-canvas-wrap { padding:0 12px; max-height:66vh; overflow:auto; text-align:center; touch-action:none; }
+    #cropCanvas { display:block; max-width:100%; margin:auto; border-radius:10px; background:#111827; touch-action:none; }
+    .crop-controls { display:grid; grid-template-columns:1fr 1.5fr; gap:9px; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); }
+    .crop-controls button { min-height:48px; }
+
     .capture-hero h2 { margin-bottom:6px; }
     .capture-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:15px; }
     .capture-method { min-height:104px; border:1px solid rgba(255,255,255,.28); border-radius:14px; padding:10px 7px; color:white; background:rgba(255,255,255,.12); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
@@ -285,7 +301,9 @@
         <div class="card ocr-panel" id="labelOcrPanel" hidden>
           <div class="section-head"><h2 class="section-title">標籤文字辨識</h2><span class="ocr-badge" id="ocrBadge">準備中</span></div>
           <div class="label-example"><strong>辨識目標</strong><span>TYPE 21R1-0SIT07</span><span>S/N PF-5AF8KA</span><span>2025/01</span></div>
-          <img id="labelPreview" class="label-preview" alt="待辨識的標籤照片" />
+          <img id="labelPreview" class="label-preview" alt="完整設備照片" />
+          <div class="vision-row"><span id="labelDetectionText">正在定位黑色設備標籤…</span><button type="button" class="secondary-btn" id="manualCropRetry">框選／裁切標籤</button></div>
+          <div class="processed-wrap" id="processedWrap" hidden><span>OCR 實際辨識區域</span><img id="processedLabelPreview" alt="強化後的標籤文字區域" /></div>
           <div class="ocr-progress" id="ocrProgress"><span id="ocrProgressText">正在準備照片…</span><div><i id="ocrProgressBar"></i></div></div>
           <div id="ocrResult" hidden>
             <div class="detected-meta"><span id="detectedType">TYPE：—</span><span id="detectedDate">日期：—</span></div>
@@ -293,6 +311,7 @@
             <p class="confidence-note" id="ocrConfidence"></p>
             <details><summary>查看辨識到的完整文字</summary><pre id="ocrRawText"></pre></details>
             <div class="ocr-actions"><button type="button" class="secondary-btn" id="retakeLabel">重新拍照</button><button type="button" class="submit-btn" id="confirmLabelPf">確認並帶入</button></div>
+            <button type="button" class="crop-retry-btn" id="cropAfterFailure">辨識不正確？框選標籤後重新辨識</button>
           </div>
           <button type="button" class="text-btn" id="cancelLabelOcr">取消辨識</button>
         </div>
@@ -384,7 +403,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.1<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.2<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
         </div>
       </div>
     </section>
@@ -415,6 +434,16 @@
   </div>
 </div>
 
+
+<div class="modal crop-modal" id="cropModal" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="modal-sheet crop-sheet">
+    <div class="modal-head"><h2 id="cropTitle">框選黑色設備標籤</h2><button class="icon-btn" type="button" id="closeCrop" aria-label="關閉">×</button></div>
+    <p class="crop-help">請拖曳框選包含 TYPE、S/N、日期與條碼的黑色標籤。可重新拖曳建立選取範圍。</p>
+    <div class="crop-canvas-wrap"><canvas id="cropCanvas"></canvas></div>
+    <div class="crop-controls"><button type="button" class="secondary-btn" id="resetCrop">重設範圍</button><button type="button" class="submit-btn" id="applyCrop">使用選取區重新辨識</button></div>
+  </div>
+</div>
+
 <div class="success-overlay" id="successOverlay">
   <div class="success-card"><div class="check">✓</div><h2>Issue 已記錄</h2><p id="successText"></p><button type="button" id="successDone">完成</button></div>
 </div>
@@ -439,6 +468,12 @@
   let pendingOcrMeta = null;
   let ocrAwaitingConfirmation = false;
   let pfBeforeOcr = '';
+  let currentLabelImage = null;
+  let currentLabelFile = null;
+  let currentLabelRect = null;
+  let cropSelection = null;
+  let cropDragging = false;
+  let cropStart = null;
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -490,6 +525,12 @@
   $('#quickManualPf').addEventListener('keydown', e => { if (e.key==='Enter') applyQuickManual(); });
   $('#labelOcrFile').addEventListener('change', handleLabelPhoto);
   $('#confirmLabelPf').addEventListener('click', confirmOcrPf);
+  $('#manualCropRetry').addEventListener('click', openCropEditor);
+  $('#cropAfterFailure').addEventListener('click', openCropEditor);
+  $('#closeCrop').addEventListener('click', closeCropEditor);
+  $('#resetCrop').addEventListener('click', resetCropSelection);
+  $('#applyCrop').addEventListener('click', applyManualCrop);
+  setupCropCanvas();
 
   function loadScript(url) {
     return new Promise((resolve,reject) => {
@@ -523,49 +564,138 @@
     pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已手動帶入：'+value,'success');
   }
 
-  function canonicalPf(value) {
-    let v=String(value||'').toUpperCase().replace(/[‐‑‒–—−_]/g,'-');
-    v=v.replace(/P\s*F/g,'PF').replace(/\s+/g,'');
-    const m=v.match(/PF-?[A-Z0-9]{5,14}/);
-    return m ? m[0] : '';
+  function repairSerialToken(value) {
+    let t=String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if (!t) return '';
+    const digitFix={O:'0',Q:'0',D:'0',I:'1',L:'1',Z:'2',S:'5',G:'6',B:'8'};
+    if (t.length>=5 && digitFix[t[0]]) t=digitFix[t[0]]+t.slice(1);
+    if (t.length===6 || t.length===7) {
+      if (digitFix[t[3]]) t=t.slice(0,3)+digitFix[t[3]]+t.slice(4);
+      if (t.length===6 && /[IL]/.test(t[4])) t=t.slice(0,4)+'1'+t.slice(5);
+    }
+    return t;
+  }
+
+  function canonicalPf(value, forceHyphen=false) {
+    let v=String(value||'').toUpperCase().replace(/[‐‑‒–—−_]/g,'-').replace(/[|]/g,'I');
+    v=v.replace(/P\s*[\/\\1I|-]?\s*[FET]/g,'PF').replace(/P\s*F/g,'PF').replace(/\s+/g,'');
+    const m=v.match(/PF-?([A-Z0-9]{5,14})/);
+    if (!m) return '';
+    const serial=repairSerialToken(m[1]);
+    return 'PF'+((forceHyphen||v.includes('PF-'))?'-':'')+serial;
+  }
+
+  function normalizeOcrText(raw) {
+    return String(raw||'').toUpperCase()
+      .replace(/[‐‑‒–—−_]/g,'-').replace(/\\/g,'/').replace(/\r/g,'\n')
+      .replace(/\bS\s*[1IL|\\/-]\s*N\b/g,'S/N')
+      .replace(/\b5\s*[1IL|\\/-]\s*N\b/g,'S/N')
+      .replace(/\bS\s*[I1]\s*N\b/g,'S/N')
+      .replace(/\bS\s*N\b/g,'S/N')
+      .replace(/\bS[IL1]N\b/g,'S/N')
+      .replace(/\bS\s*[A4]\b(?=\s+P)/g,'S/N')
+      .replace(/\bP\s*[\/\\1I| -]?\s*[FET]\b\s*[-:]?/g,'PF-');
   }
 
   function extractLabelData(raw) {
-    const text=String(raw||'').toUpperCase().replace(/[‐‑‒–—−]/g,'-').replace(/\r/g,'\n');
+    const original=String(raw||'').trim();
+    const text=normalizeOcrText(original);
     const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-    let pf='', source='none';
-    const snPattern=/(?:S\s*[\/\\|]?\s*N|SERIAL\s*(?:NO\.?)?)\s*[:#=-]?\s*((?:P\s*F)\s*-?\s*[A-Z0-9][A-Z0-9\s-]{4,18})/i;
-    const pfPattern=/(P\s*F\s*-?\s*[A-Z0-9]{5,14})/i;
-    for (const line of lines) {
-      const m=line.match(snPattern);
-      if (m && canonicalPf(m[1])) { pf=canonicalPf(m[1]); source='sn'; break; }
+    let pf='',source='none';
+    const snPatterns=[
+      /(?:S\s*\/\s*N|S\/N|SERIAL\s*(?:NO\.?)?)\s*[:#=;,-]*\s*(?:PF\s*[-:]?\s*)?([A-Z0-9][A-Z0-9\s-]{4,16})/i,
+      /(?:S[IL1]N|5\/N|SN|S[A4])\s*[:#=;,-]*\s*(?:P[FET]\s*[-:]?\s*)?([A-Z0-9][A-Z0-9\s-]{4,16})/i
+    ];
+    for (const line of [...lines,text.replace(/[\t ]+/g,' ')]) {
+      for (const rx of snPatterns) {
+        const m=line.match(rx); if (!m) continue;
+        let token=m[1].replace(/\s+/g,'').split(/(?=TYPE|20\d{2})/)[0].replace(/-+$/,'');
+        token=repairSerialToken(token);
+        if (token.length>=5) { pf='PF-'+token; source='sn'; break; }
+      }
+      if (pf) break;
     }
     if (!pf) {
-      const compact=text.replace(/[ \t]+/g,' ');
-      const m=compact.match(snPattern);
-      if (m) { pf=canonicalPf(m[1]); if (pf) source='sn'; }
-    }
-    if (!pf) {
-      for (const line of lines) {
-        const m=line.match(pfPattern);
-        if (m && canonicalPf(m[1])) { pf=canonicalPf(m[1]); source='pf'; break; }
+      const matches=[...text.matchAll(/P\s*[\/\\1I| -]?\s*[FET]\s*[-:]?\s*([A-Z0-9][A-Z0-9\s-]{4,16})/gi)];
+      for (const m of matches) {
+        const token=repairSerialToken(m[1].replace(/\s+/g,'').replace(/-+$/,''));
+        if (token.length>=5) { pf='PF-'+token; source='pf'; break; }
       }
     }
-    const typeMatch=text.match(/TYPE\s*[:#=-]?\s*([A-Z0-9][A-Z0-9-]{3,20})/i);
-    const dateMatch=text.match(/\b(20\d{2}[\/.\-](?:0?[1-9]|1[0-2]))\b/);
-    return {pf,source,type:typeMatch?typeMatch[1]:'',date:dateMatch?dateMatch[1].replace(/[.\-]/g,'/'):'',raw:String(raw||'').trim()};
+    const typeMatch=text.match(/(?:TYPE|TIPE|TPE|7YPE)\s*[:#=;-]?\s*([A-Z0-9][A-Z0-9-]{3,22})/i);
+    let type=typeMatch?typeMatch[1]:'';
+    type=type.replace(/^2IR/,'21R').replace(/O(?=\d)/g,'0');
+    const dateText=text.replace(/[OQ]/g,'0').replace(/[IL]/g,'1');
+    let date='';
+    let dm=dateText.match(/\b(20\d{2})\s*[\/.\-]?\s*0?([01]?\d)\b/);
+    if (dm && +dm[2]>=1 && +dm[2]<=12) date=dm[1]+'/'+String(+dm[2]).padStart(2,'0');
+    if (!date) {
+      dm=dateText.match(/\b(20\d{2})0(0[1-9]|1[0-2])\b/);
+      if (dm) date=dm[1]+'/'+dm[2];
+    }
+    return {pf,source,type,date,raw:original,normalized:text};
   }
-  window.PFLabelParser={extractLabelData,canonicalPf};
+  window.PFLabelParser={extractLabelData,canonicalPf,repairSerialToken,normalizeOcrText};
 
-  async function preprocessLabelImage(file) {
-    const bitmap=await createImageBitmap(file);
-    const maxW=1800, scale=Math.min(2.2,maxW/bitmap.width);
-    const canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.round(bitmap.width*scale)); canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-    const ctx=canvas.getContext('2d',{willReadFrequently:true});
-    ctx.filter='grayscale(1) contrast(1.65)'; ctx.drawImage(bitmap,0,0,canvas.width,canvas.height); bitmap.close?.();
-    return canvas.toDataURL('image/jpeg',.92);
+  function sourceSize(img) { return {w:img.naturalWidth||img.width,h:img.naturalHeight||img.height}; }
+
+  function loadLabelImage(file) {
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=()=>{ img._objectUrl=url; resolve(img); }; img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('image load failed'));}; img.src=url;
+    });
   }
+
+  function detectBlackLabel(img) {
+    const sz=sourceSize(img), maxSide=900, scale=Math.min(1,maxSide/Math.max(sz.w,sz.h));
+    const w=Math.max(40,Math.round(sz.w*scale)),h=Math.max(40,Math.round(sz.h*scale));
+    const c=document.createElement('canvas'); c.width=w;c.height=h; const ctx=c.getContext('2d',{willReadFrequently:true}); ctx.drawImage(img,0,0,w,h);
+    const d=ctx.getImageData(0,0,w,h).data, gray=new Uint8Array(w*h),edge=new Uint8Array(w*h);
+    for(let i=0,j=0;i<d.length;i+=4,j++) gray[j]=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;
+    for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++) { const i=y*w+x; if(Math.abs(gray[i+1]-gray[i-1])>38) edge[i]=1; }
+    const rx=Math.max(5,Math.round(w*.018)),ry=Math.max(2,Math.round(h*.006));
+    const hd=new Uint8Array(w*h), dil=new Uint8Array(w*h);
+    for(let y=0;y<h;y++) { let sum=0; for(let x=0;x<w;x++){ const add=x+rx,sub=x-rx-1;if(add<w)sum+=edge[y*w+add];if(sub>=0)sum-=edge[y*w+sub];if(sum>0)hd[y*w+x]=1; } }
+    for(let x=0;x<w;x++) { let sum=0; for(let y=0;y<h;y++){ const add=y+ry,sub=y-ry-1;if(add<h)sum+=hd[add*w+x];if(sub>=0)sum-=hd[sub*w+x];if(sum>0)dil[y*w+x]=1; } }
+    const seen=new Uint8Array(w*h), stack=new Int32Array(w*h); let best=null;
+    for(let i=0;i<dil.length;i++) if(dil[i]&&!seen[i]) {
+      let top=0;stack[top++]=i;seen[i]=1;let minX=w,minY=h,maxX=0,maxY=0,count=0;
+      while(top){const q=stack[--top],x=q%w,y=(q/w)|0;count++;if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+        if(x&&dil[q-1]&&!seen[q-1]){seen[q-1]=1;stack[top++]=q-1}if(x<w-1&&dil[q+1]&&!seen[q+1]){seen[q+1]=1;stack[top++]=q+1}if(y&&dil[q-w]&&!seen[q-w]){seen[q-w]=1;stack[top++]=q-w}if(y<h-1&&dil[q+w]&&!seen[q+w]){seen[q+w]=1;stack[top++]=q+w}}
+      const bw=maxX-minX+1,bh=maxY-minY+1,area=bw*bh,frac=area/(w*h),ar=bw/bh;
+      if(frac<.001||frac>.18||ar<1.7||ar>5.6||bw<w*.08||bh<h*.018||(minY<h*.12&&bw>w*.55))continue;
+      let edges=0,sumG=0,samples=0;for(let y=minY;y<=maxY;y+=2)for(let x=minX;x<=maxX;x+=2){const q=y*w+x;edges+=edge[q];sumG+=gray[q];samples++}
+      const density=edges/Math.max(1,samples),mean=sumG/Math.max(1,samples),shape=Math.max(.15,1-Math.abs(Math.log(ar/2.8))*.45),dark=1+Math.max(0,145-mean)/120;
+      const score=density*Math.sqrt(area)*shape*dark;
+      if(!best||score>best.score)best={x:minX,y:minY,w:bw,h:bh,score};
+    }
+    if(!best)return null;
+    const padX=best.w*.045,padY=best.h*.09;
+    return {x:Math.max(0,(best.x-padX)/scale),y:Math.max(0,(best.y-padY)/scale),w:Math.min(sz.w,(best.w+2*padX)/scale),h:Math.min(sz.h,(best.h+2*padY)/scale),auto:true};
+  }
+
+  function fullImageRect(img){const s=sourceSize(img);return{x:0,y:0,w:s.w,h:s.h,auto:false}}
+
+  function cropToDataUrl(img,rect,quality=.94) {
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(rect.w));c.height=Math.max(1,Math.round(rect.h));
+    c.getContext('2d').drawImage(img,rect.x,rect.y,rect.w,rect.h,0,0,c.width,c.height);return c.toDataURL('image/jpeg',quality);
+  }
+
+  function enhanceLabelForOcr(img,rect) {
+    const aspect=rect.w/Math.max(1,rect.h), headerRatio=aspect>1.8?.58:1;
+    const srcH=rect.h*headerRatio,targetW=Math.min(2400,Math.max(1400,Math.round(rect.w*7))),scale=targetW/rect.w,targetH=Math.max(220,Math.round(srcH*scale));
+    const c=document.createElement('canvas');c.width=targetW;c.height=targetH;const ctx=c.getContext('2d',{willReadFrequently:true});
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,rect.x,rect.y,rect.w,srcH,0,0,targetW,targetH);
+    const id=ctx.getImageData(0,0,targetW,targetH),a=id.data,g=new Uint8Array(targetW*targetH),hist=new Uint32Array(256);let mean=0;
+    for(let i=0,j=0;i<a.length;i+=4,j++){const v=(a[i]*77+a[i+1]*150+a[i+2]*29)>>8;g[j]=v;hist[v]++;mean+=v}mean/=g.length;
+    let low=0,high=255,acc=0,n=g.length;for(let i=0;i<256;i++){acc+=hist[i];if(acc>=n*.03){low=i;break}}acc=0;for(let i=255;i>=0;i--){acc+=hist[i];if(acc>=n*.03){high=i;break}}
+    const invert=mean<145,range=Math.max(28,high-low),out=new Uint8ClampedArray(g.length);
+    for(let y=0;y<targetH;y++)for(let x=0;x<targetW;x++){const i=y*targetW+x,base=(g[i]-low)*255/range;let v=invert?255-base:base;const l=x?g[i-1]:g[i],r=x<targetW-1?g[i+1]:g[i],u=y?g[i-targetW]:g[i],dn=y<targetH-1?g[i+targetW]:g[i];const blur=(l+r+u+dn+g[i]*4)/8;let sharp=(invert?255-g[i]:g[i])*1.75-(invert?255-blur:blur)*.75;v=v*.6+sharp*.4;out[i]=Math.max(0,Math.min(255,v));}
+    for(let i=0,j=0;i<a.length;i+=4,j++){a[i]=a[i+1]=a[i+2]=out[j];a[i+3]=255}ctx.putImageData(id,0,0);
+    return c.toDataURL('image/png');
+  }
+
+  window.PFLabelVision={detectBlackLabel,enhanceLabelForOcr};
 
   function setOcrProgress(label,pct) {
     $('#ocrProgressText').textContent=label; $('#ocrProgressBar').style.width=Math.max(4,Math.min(100,pct))+'%';
@@ -573,31 +703,59 @@
 
   async function handleLabelPhoto(e) {
     const file=e.target.files?.[0]; if (!file) return;
-    pfBeforeOcr=pfInput.value; ocrAwaitingConfirmation=false; pendingOcrMeta=null;
-    const panel=$('#labelOcrPanel'); panel.hidden=false; $('#ocrResult').hidden=true; $('#ocrProgress').hidden=false;
-    $('#ocrBadge').textContent='辨識中'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
-    const preview=$('#labelPreview'); if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
-    preview.dataset.url=URL.createObjectURL(file); preview.src=preview.dataset.url;
-    panel.scrollIntoView({behavior:'smooth',block:'start'}); setOcrProgress('正在強化標籤文字…',10);
-    let image;
-    try { image=await preprocessLabelImage(file); } catch (_) { image=file; }
-    setOcrProgress('正在載入文字辨識元件…',18);
-    const loaded=await ensureOcrLibrary();
-    if (!loaded) {
-      showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 元件無法載入；請查看照片後手動輸入 PF Code。');
-      e.target.value=''; return;
-    }
-    try {
-      const result=await Tesseract.recognize(image,'eng',{logger:m=>{
-        if (m.status==='recognizing text') setOcrProgress('正在辨識標籤文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70);
-        else if (m.status) setOcrProgress('文字辨識準備中…',22);
-      }});
+    pfBeforeOcr=pfInput.value; ocrAwaitingConfirmation=false; pendingOcrMeta=null; currentLabelFile=file;
+    const panel=$('#labelOcrPanel'); panel.hidden=false; $('#ocrResult').hidden=true; $('#ocrProgress').hidden=false; $('#processedWrap').hidden=true;
+    $('#ocrBadge').textContent='定位標籤中'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
+    const preview=$('#labelPreview'); if(preview.dataset.url)URL.revokeObjectURL(preview.dataset.url);preview.dataset.url=URL.createObjectURL(file);preview.src=preview.dataset.url;
+    panel.scrollIntoView({behavior:'smooth',block:'start'});setOcrProgress('正在定位黑色設備標籤…',8);
+    try { if(currentLabelImage?._objectUrl)URL.revokeObjectURL(currentLabelImage._objectUrl);currentLabelImage=await loadLabelImage(file);currentLabelRect=detectBlackLabel(currentLabelImage); }
+    catch(_){currentLabelImage=null;currentLabelRect=null}
+    if(currentLabelRect)$('#labelDetectionText').textContent='已自動定位黑色標籤；正在放大並強化文字。';
+    else {$('#labelDetectionText').textContent='未可靠定位黑色標籤；先嘗試整張照片，失敗時請框選。';currentLabelRect=currentLabelImage?fullImageRect(currentLabelImage):null}
+    await recognizeCurrentLabel(currentLabelRect?.auto?'自動裁切':'整張照片');e.target.value='';
+  }
+
+  async function recognizeCurrentLabel(mode='裁切區域') {
+    if(!currentLabelImage||!currentLabelRect)return showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'影像無法載入，請重新拍照。');
+    $('#ocrResult').hidden=true;$('#ocrProgress').hidden=false;$('#processedWrap').hidden=false;setOcrProgress('正在放大、提高對比與銳利度…',14);
+    const enhanced=enhanceLabelForOcr(currentLabelImage,currentLabelRect);window.__lastOcrImage=enhanced;
+    $('#processedLabelPreview').src=enhanced;$('#labelDetectionText').textContent=mode+'：已強化黑底白字標籤區域。';
+    setOcrProgress('正在載入文字辨識元件…',20);const loaded=await ensureOcrLibrary();
+    if(!loaded)return showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 元件無法載入；請框選標籤或手動輸入。');
+    try{
+      let result;
+      if(Tesseract.createWorker){
+        const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')setOcrProgress('正在辨識強化後文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70)}});
+        try{await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-: .'});result=await worker.recognize(enhanced)}finally{await worker.terminate()}
+      }else result=await Tesseract.recognize(enhanced,'eng',{logger:m=>{if(m.status==='recognizing text')setOcrProgress('正在辨識強化後文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70)}});
       const parsed=extractLabelData(result?.data?.text||'');
-      showOcrResult(parsed,parsed.pf?'已找到候選 PF Code，請確認或修正後再帶入。':'未自動找到 PF Code，請依照片／辨識文字手動輸入。');
-    } catch (err) {
-      showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'文字辨識失敗；請依照片手動輸入 PF Code。');
-    }
-    e.target.value='';
+      showOcrResult(parsed,parsed.pf?'已找到候選 PF Code，請確認或修正。':'此區域仍未找到 PF Code；請框選黑色標籤後重試。');
+    }catch(_){showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 執行失敗；請框選標籤後重新辨識。')}
+  }
+
+  function setupCropCanvas(){
+    const c=$('#cropCanvas');
+    c.addEventListener('pointerdown',e=>{if(!currentLabelImage)return;c.setPointerCapture(e.pointerId);cropDragging=true;cropStart=canvasToSource(e);cropSelection={x:cropStart.x,y:cropStart.y,w:1,h:1};drawCropCanvas()});
+    c.addEventListener('pointermove',e=>{if(!cropDragging)return;const p=canvasToSource(e);cropSelection={x:Math.min(cropStart.x,p.x),y:Math.min(cropStart.y,p.y),w:Math.abs(p.x-cropStart.x),h:Math.abs(p.y-cropStart.y)};drawCropCanvas()});
+    const end=e=>{if(cropDragging){cropDragging=false;drawCropCanvas()}};c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+  }
+
+  function openCropEditor(){
+    if(!currentLabelImage)return showToast('請先拍攝或選擇標籤照片','error');
+    $('#cropModal').classList.add('open');document.body.style.overflow='hidden';cropSelection=currentLabelRect||defaultCropRect();drawCropCanvas();
+  }
+  function closeCropEditor(){ $('#cropModal').classList.remove('open');document.body.style.overflow=''; }
+  function defaultCropRect(){const s=sourceSize(currentLabelImage);return{x:s.w*.12,y:s.h*.25,w:s.w*.76,h:s.h*.5,auto:false}}
+  function resetCropSelection(){cropSelection=currentLabelRect?.auto?currentLabelRect:defaultCropRect();drawCropCanvas()}
+  function canvasMetrics(){const s=sourceSize(currentLabelImage),maxW=Math.min(700,window.innerWidth-28),maxH=Math.min(window.innerHeight*.62,700),scale=Math.min(maxW/s.w,maxH/s.h);return{s,scale,w:Math.round(s.w*scale),h:Math.round(s.h*scale)}}
+  function canvasToSource(e){const c=$('#cropCanvas'),r=c.getBoundingClientRect(),m=canvasMetrics();return{x:Math.max(0,Math.min(m.s.w,(e.clientX-r.left)*m.s.w/r.width)),y:Math.max(0,Math.min(m.s.h,(e.clientY-r.top)*m.s.h/r.height))}}
+  function drawCropCanvas(){
+    if(!currentLabelImage)return;const c=$('#cropCanvas'),m=canvasMetrics();c.width=m.w;c.height=m.h;const x=c.getContext('2d');x.drawImage(currentLabelImage,0,0,m.w,m.h);x.fillStyle='rgba(2,6,23,.48)';x.fillRect(0,0,m.w,m.h);
+    const r=cropSelection||defaultCropRect(),dx=r.x*m.scale,dy=r.y*m.scale,dw=r.w*m.scale,dh=r.h*m.scale;x.save();x.beginPath();x.rect(dx,dy,dw,dh);x.clip();x.drawImage(currentLabelImage,0,0,m.w,m.h);x.restore();x.strokeStyle='#22d3ee';x.lineWidth=3;x.strokeRect(dx,dy,dw,dh);x.fillStyle='#22d3ee';for(const [px,py]of[[dx,dy],[dx+dw,dy],[dx,dy+dh],[dx+dw,dy+dh]])x.fillRect(px-6,py-6,12,12);
+  }
+  async function applyManualCrop(){
+    if(!cropSelection||cropSelection.w<30||cropSelection.h<20)return showToast('請框選完整黑色標籤區域','error');
+    currentLabelRect={...cropSelection,auto:false};closeCropEditor();$('#ocrBadge').textContent='重新辨識中';$('#ocrBadge').style.background='#fef3c7';$('#ocrBadge').style.color='#92400e';await recognizeCurrentLabel('手動框選');
   }
 
   function showOcrResult(parsed,message) {
@@ -614,7 +772,7 @@
     } else {
       ocrAwaitingConfirmation=true;
       $('#ocrConfidence').textContent='未自動找到 PF Code。請依照片或辨識文字輸入後，再按「確認並帶入」。 '+message;
-      $('#ocrBadge').textContent='需輸入確認'; $('#ocrBadge').style.background='#fee2e2'; $('#ocrBadge').style.color='#991b1b';
+      $('#ocrBadge').textContent='需框選或修正'; $('#ocrBadge').style.background='#fee2e2'; $('#ocrBadge').style.color='#991b1b';
     }
     $('#confirmedPf').focus();
   }
@@ -630,7 +788,7 @@
 
   function resetOcrPanel() {
     if (ocrAwaitingConfirmation) pfInput.value=pfBeforeOcr;
-    pendingOcrMeta=null; ocrAwaitingConfirmation=false; pfBeforeOcr='';
+    pendingOcrMeta=null; ocrAwaitingConfirmation=false; pfBeforeOcr=''; currentLabelFile=null; currentLabelRect=null; cropSelection=null;
     $('#labelOcrPanel').hidden=true; $('#ocrResult').hidden=true; $('#labelOcrFile').value='';
   }
 
