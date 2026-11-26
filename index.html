@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v3.3</title>
+  <title>PF Issue Logger Mobile v3.4</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -190,6 +190,22 @@
     @keyframes scanMove { from { transform:translateY(-54px); } to { transform:translateY(54px); } }
     .scanner-status { margin:0; padding:10px 16px; background:#111827; color:#bfdbfe; text-align:center; font-size:12px; line-height:1.4; }
     .scan-guide { padding: 12px 16px calc(18px + env(safe-area-inset-bottom)); color: #cbd5e1; text-align: center; font-size: 12px; line-height: 1.5; }
+
+    #reader { min-height:250px; }
+    #reader::after { content:""; position:absolute; z-index:3; left:4%; right:4%; top:50%; height:116px; transform:translateY(-50%); border:2px solid rgba(34,211,238,.92); border-radius:10px; box-shadow:0 0 0 999px rgba(2,6,23,.18); pointer-events:none; }
+    .scanner-tools { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 14px; background:#111827; color:#94a3b8; font-size:10px; }
+    .scanner-tools button { min-height:36px; border:1px solid #475569; border-radius:9px; color:white; background:#1e293b; font-size:11px; font-weight:900; }
+    .scanner-tools button.on { color:#0f172a; background:#fde047; border-color:#fde047; }
+    .scanner-tools button:disabled { opacity:.4; }
+    .barcode-result { position:relative; z-index:6; margin:10px 14px 0; padding:12px; border-radius:13px; color:#0f172a; background:white; border:2px solid #38bdf8; }
+    .result-grid { display:grid; grid-template-columns:1.7fr .8fr; gap:8px; }
+    .result-grid div { min-width:0; padding:8px; border-radius:9px; background:#f1f5f9; }
+    .result-grid small { display:block; margin-bottom:4px; color:#64748b; font-size:9px; font-weight:900; }
+    .result-grid strong { display:block; overflow-wrap:anywhere; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+    .barcode-result p { margin:9px 1px; color:#475569; font-size:11px; line-height:1.45; }
+    .barcode-result-actions { display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
+    .barcode-result-actions button { min-height:42px; }
+
     .scan-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:11px; }
     .scan-actions button, .manual-row button { border:0; border-radius:11px; min-height:46px; color:white; background:var(--blue); font-weight:800; }
     .scan-actions .photo-scan-btn { background:#0e7490; }
@@ -433,7 +449,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.3<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.4<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
         </div>
       </div>
     </section>
@@ -448,18 +464,31 @@
 
 <div class="modal" id="scannerModal" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
   <div class="modal-sheet">
-    <div class="modal-head"><h2 id="scannerTitle">掃描 PF 一維條碼</h2><button class="icon-btn" type="button" id="closeScanner" aria-label="關閉">×</button></div>
+    <div class="modal-head"><h2 id="scannerTitle">寬幅一維條碼掃描</h2><button class="icon-btn" type="button" id="closeScanner" aria-label="關閉">×</button></div>
     <p class="scanner-status" id="scannerStatus">準備開啟後鏡頭…</p>
     <div id="reader"><div style="padding:35px 18px;color:#94a3b8;text-align:center">相機畫面將顯示在這裡</div></div>
+    <div class="scanner-tools">
+      <button type="button" id="toggleTorch" disabled>🔦 補光燈</button>
+      <span id="cameraCapability">後置相機・高解析度</span>
+    </div>
+    <div class="barcode-result" id="barcodeResult" hidden>
+      <div class="result-grid"><div><small>原始條碼值</small><strong id="barcodeRawValue">—</strong></div><div><small>格式</small><strong id="barcodeFormat">—</strong></div></div>
+      <p id="barcodeDecision"></p>
+      <div class="barcode-result-actions">
+        <button type="button" class="secondary-btn" id="resumeBarcodeScan">繼續掃描</button>
+        <button type="button" class="submit-btn" id="confirmBarcodePf" hidden>確認並帶入 PF</button>
+        <button type="button" class="secondary-btn" id="barcodeToOcr" hidden>改用標籤 OCR</button>
+      </div>
+    </div>
     <div class="scan-guide">
-      將條碼水平置於畫面中央並保持穩定；掃描成功後會自動帶入 PF Code。
+      將寬而密集的條碼橫向填滿掃描框；距離約 15–25 cm，避免反光並保持穩定。掃描結果必須確認後才會帶入 PF。
       <div class="scan-actions">
         <button type="button" id="retryLiveScan">重新開啟即時掃描</button>
         <button class="photo-scan-btn" type="button" id="scanBarcodePhoto">📷 拍攝條碼辨識</button>
       </div>
       <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment" hidden />
       <img class="barcode-preview" id="barcodePreview" alt="拍攝的條碼照片" />
-      <div class="manual-row"><input id="manualPf" placeholder="辨識失敗時可手動輸入 PF Code" autocapitalize="characters" autocomplete="off" /><button type="button" id="useManualPf">帶入</button></div>
+      <div class="manual-row"><input id="manualPf" placeholder="條碼不是 PF 時可手動輸入 PF Code" autocapitalize="characters" autocomplete="off" /><button type="button" id="useManualPf">帶入</button></div>
     </div>
   </div>
 </div>
@@ -507,6 +536,12 @@
   let currentCandidates = [];
   let selectedCandidate = '';
   let recognitionRisk = 'low';
+  let pendingBarcode = null;
+  let barcodePaused = false;
+  let torchOn = false;
+  let activeVideoTrack = null;
+  let lastBarcodeKey = '';
+  let lastBarcodeAt = 0;
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -550,6 +585,10 @@
   $('#closeScanner').addEventListener('click', closeScanner);
   $('#scannerModal').addEventListener('click', e => { if (e.target.id === 'scannerModal') closeScanner(); });
   $('#retryLiveScan').addEventListener('click', startLiveScanner);
+  $('#toggleTorch').addEventListener('click', toggleTorch);
+  $('#resumeBarcodeScan').addEventListener('click', resumeBarcodeScanning);
+  $('#confirmBarcodePf').addEventListener('click', confirmBarcodeResult);
+  $('#barcodeToOcr').addEventListener('click', barcodeToLabelOcr);
   $('#takeLabelPhoto').addEventListener('click', () => $('#labelOcrFile').click());
   $('#retakeLabel').addEventListener('click', () => $('#labelOcrFile').click());
   $('#cancelLabelOcr').addEventListener('click', resetOcrPanel);
@@ -906,6 +945,7 @@
     $('#scannerModal').classList.add('open');
     document.body.style.overflow='hidden';
     $('#barcodePreview').style.display='none';
+    resetBarcodeResult();
     await startLiveScanner();
   }
 
@@ -943,28 +983,29 @@
     }
   }
 
+  function barcodeFormatLabel(format='') {
+    const key=String(format||'').toLowerCase().replace(/-/g,'_');
+    const labels={code_128:'Code 128',code_39:'Code 39',code_93:'Code 93',itf:'ITF',codabar:'Codabar',ean_13:'EAN-13',ean_8:'EAN-8',upc_a:'UPC-A',upc_e:'UPC-E'};
+    return labels[key]||format||'Unknown';
+  }
+
+  async function optimizeVideoTrack(track) {
+    if(!track)return;activeVideoTrack=track;const caps=track.getCapabilities?.()||{},advanced=[];
+    if(caps.focusMode?.includes('continuous'))advanced.push({focusMode:'continuous'});
+    if(caps.exposureMode?.includes('continuous'))advanced.push({exposureMode:'continuous'});
+    if(caps.whiteBalanceMode?.includes('continuous'))advanced.push({whiteBalanceMode:'continuous'});
+    if(caps.zoom){const z=Math.min(Math.max(caps.zoom.min||1,1.15),caps.zoom.max||1.15);advanced.push({zoom:z})}
+    if(advanced.length)try{await track.applyConstraints({advanced})}catch(_){}
+    const torch=!!caps.torch;$('#toggleTorch').disabled=!torch;$('#cameraCapability').textContent='後置相機・高解析度'+(caps.focusMode?.includes('continuous')?'・連續對焦':'')+(torch?'・支援補光':'');
+  }
+
   async function startNativeScanner(formats) {
-    const video=document.createElement('video');
-    video.id='nativeScannerVideo'; video.setAttribute('playsinline',''); video.muted=true; video.autoplay=true;
-    const line=document.createElement('div'); line.className='scan-line';
-    const host=$('#reader'); host.innerHTML=''; host.append(video,line);
-    nativeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
-    video.srcObject=nativeStream; await video.play();
-    const detector=new BarcodeDetector({formats});
-    scannerRunning=true; setScannerStatus('即時掃描中：請將 PF 一維條碼水平放入畫面中央','ok');
-    const detect=async()=>{
-      if (!scannerRunning || !nativeStream) return;
-      if (!scanningBusy && video.readyState>=2) {
-        scanningBusy=true;
-        try {
-          const found=await detector.detect(video);
-          if (found?.length) { setPfFromScan(found[0].rawValue); return; }
-        } catch (_) {}
-        finally { scanningBusy=false; }
-      }
-      nativeFrame=requestAnimationFrame(detect);
-    };
-    detect();
+    const video=document.createElement('video');video.id='nativeScannerVideo';video.setAttribute('playsinline','');video.muted=true;video.autoplay=true;
+    const line=document.createElement('div');line.className='scan-line';const host=$('#reader');host.innerHTML='';host.append(video,line);
+    nativeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920,min:1280},height:{ideal:1080,min:720},frameRate:{ideal:30,min:15}},audio:false}).catch(()=>navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false}));
+    video.srcObject=nativeStream;await video.play();await optimizeVideoTrack(nativeStream.getVideoTracks()[0]);
+    const detector=new BarcodeDetector({formats});scannerRunning=true;barcodePaused=false;setScannerStatus('掃描中：請將長條條碼橫向填滿寬掃描框','ok');
+    const detect=async()=>{if(!scannerRunning||!nativeStream)return;if(!barcodePaused&&!scanningBusy&&video.readyState>=2){scanningBusy=true;try{const found=await detector.detect(video);if(found?.length){const hit=found.find(x=>BARCODE_FORMATS.includes(String(x.format||'').toLowerCase()))||found[0];handleBarcodeDecoded(hit.rawValue,barcodeFormatLabel(hit.format))}}catch(_){}finally{scanningBusy=false}}nativeFrame=requestAnimationFrame(detect)};detect();
   }
 
   function html5Formats() {
@@ -976,9 +1017,15 @@
     renderReaderMessage('正在請求相機權限…');
     $('#reader').innerHTML='';
     scanner=new Html5Qrcode('reader',{formatsToSupport:html5Formats(),verbose:false});
-    const config={fps:12,qrbox:{width:Math.min(330,window.innerWidth-44),height:130},aspectRatio:1.45,disableFlip:false,videoConstraints:{facingMode:{ideal:'environment'}}};
-    await scanner.start({facingMode:'environment'},config,decoded=>setPfFromScan(decoded),()=>{});
-    scannerRunning=true; setScannerStatus('即時掃描中：請將 PF 一維條碼水平放入畫面中央','ok');
+    const config={fps:18,qrbox:{width:Math.min(380,window.innerWidth-24),height:112},aspectRatio:1.7778,disableFlip:true,experimentalFeatures:{useBarCodeDetectorIfSupported:true},videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920,min:1280},height:{ideal:1080,min:720},frameRate:{ideal:30,min:15}}};
+    await scanner.start({facingMode:'environment'},config,(decoded,result)=>handleBarcodeDecoded(decoded,html5FormatLabel(result)),()=>{});
+    scannerRunning=true;barcodePaused=false;setScannerStatus('掃描中：請將長條條碼橫向填滿寬掃描框','ok');
+    setTimeout(()=>{const v=$('#reader video');const t=v?.srcObject?.getVideoTracks?.()[0];if(t)optimizeVideoTrack(t)},350);
+  }
+
+  function html5FormatLabel(result) {
+    const name=result?.result?.format?.formatName||result?.format?.formatName||result?.decodedResult?.format||'';
+    return barcodeFormatLabel(name);
   }
 
   function cameraErrorText(err) {
@@ -997,7 +1044,7 @@
     if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
     preview.dataset.url=URL.createObjectURL(file); preview.src=preview.dataset.url; preview.style.display='block';
     setScannerStatus('正在辨識拍攝的條碼照片…');
-    let decoded='';
+    let decoded='',decodedFormat='Unknown';
     if ('BarcodeDetector' in window) {
       try {
         const supported=BarcodeDetector.getSupportedFormats ? await BarcodeDetector.getSupportedFormats() : BARCODE_FORMATS;
@@ -1005,7 +1052,7 @@
         if (formats.length) {
           const bitmap=await createImageBitmap(file);
           const result=await new BarcodeDetector({formats}).detect(bitmap);
-          bitmap.close?.(); decoded=result?.[0]?.rawValue||'';
+          bitmap.close?.(); decoded=result?.[0]?.rawValue||''; decodedFormat=barcodeFormatLabel(result?.[0]?.format);
         }
       } catch (_) {}
     }
@@ -1014,11 +1061,11 @@
         renderReaderMessage('正在分析條碼照片…');
         $('#reader').innerHTML='';
         const fileScanner=new Html5Qrcode('reader',{formatsToSupport:html5Formats(),verbose:false});
-        decoded=await fileScanner.scanFile(file,false);
+        decoded=await fileScanner.scanFile(file,false); decodedFormat='Image scan';
         try { await fileScanner.clear(); } catch (_) {}
       } catch (_) {}
     }
-    if (decoded) setPfFromScan(decoded);
+    if (decoded) handleBarcodeDecoded(decoded,decodedFormat);
     else {
       setScannerStatus('未自動辨識；照片已保留，請依照片手動輸入 PF Code。','error');
       $('#manualPf').focus();
@@ -1028,7 +1075,7 @@
 
   async function stopNativeScanner() {
     cancelAnimationFrame(nativeFrame); nativeFrame=0; scanningBusy=false;
-    nativeStream?.getTracks().forEach(t=>t.stop()); nativeStream=null;
+    nativeStream?.getTracks().forEach(t=>t.stop()); nativeStream=null; activeVideoTrack=null; torchOn=false; $('#toggleTorch').classList.remove('on'); $('#toggleTorch').textContent='🔦 補光燈'; $('#toggleTorch').disabled=true;
     const video=$('#nativeScannerVideo'); if (video) { video.srcObject=null; video.remove(); }
   }
 
@@ -1038,7 +1085,7 @@
       try { await scanner.clear(); } catch (_) {}
       scanner=null;
     }
-    await stopNativeScanner(); scannerRunning=false;
+    await stopNativeScanner(); scannerRunning=false;barcodePaused=false;
     if (resetReader) renderReaderMessage('相機畫面將顯示在這裡');
   }
 
@@ -1048,12 +1095,25 @@
     document.body.style.overflow='';
   }
 
-  function setPfFromScan(value) {
-    const pf=normalizePf(value); if (!pf) return;
-    captureMeta={method:'Barcode',ocrText:'',labelType:'',labelDate:''};
-    pfInput.value=pf; navigator.vibrate?.(100);
-    closeScanner(); showToast('已掃描：'+pf,'success');
+  function strictPfFromBarcode(raw) {
+    const value=String(raw||'').trim().toUpperCase().replace(/[‐‑‒–—−_]/g,'-').replace(/\s+/g,'');
+    return /^PF-?[A-Z0-9]{5,14}$/.test(value)?value:'';
   }
+
+  function handleBarcodeDecoded(raw,format='Unknown') {
+    const value=String(raw??'').trim();if(!value)return;const now=Date.now(),key=format+'|'+value;if(key===lastBarcodeKey&&now-lastBarcodeAt<1800)return;lastBarcodeKey=key;lastBarcodeAt=now;
+    const pf=strictPfFromBarcode(value);pendingBarcode={raw:value,format:format||'Unknown',pf};barcodePaused=true;navigator.vibrate?.(100);
+    $('#barcodeRawValue').textContent=value;$('#barcodeFormat').textContent=format||'Unknown';$('#barcodeResult').hidden=false;
+    $('#confirmBarcodePf').hidden=!pf;$('#barcodeToOcr').hidden=!!pf;
+    $('#barcodeDecision').textContent=pf?'條碼值符合 PF 格式。請與標籤 S/N 核對後，再確認帶入。':'此條碼值不符合 PF Code 格式，不會寫入 PF。請改用標籤 OCR 或手動輸入。';
+    setScannerStatus(pf?'已讀取 PF 格式條碼，等待人工確認':'已讀取條碼，但不是 PF 格式','ok');
+  }
+
+  function resetBarcodeResult(){pendingBarcode=null;barcodePaused=false;$('#barcodeResult').hidden=true;$('#confirmBarcodePf').hidden=true;$('#barcodeToOcr').hidden=true;}
+  function resumeBarcodeScanning(){resetBarcodeResult();setScannerStatus('繼續掃描：將長條條碼橫向填滿掃描框','ok');}
+  function confirmBarcodeResult(){if(!pendingBarcode?.pf)return;captureMeta={method:'Barcode',ocrText:'',labelType:'',labelDate:'',barcodeRaw:pendingBarcode.raw,barcodeFormat:pendingBarcode.format};pfInput.value=pendingBarcode.pf;closeScanner();showToast('條碼已人工確認：'+pendingBarcode.pf,'success');}
+  async function barcodeToLabelOcr(){await closeScanner();setTimeout(()=>$('#labelOcrFile').click(),120);}
+  async function toggleTorch(){const t=activeVideoTrack||nativeStream?.getVideoTracks?.()[0]||$('#reader video')?.srcObject?.getVideoTracks?.()[0];if(!t)return;const caps=t.getCapabilities?.()||{};if(!caps.torch)return showToast('此裝置不支援網頁補光燈','error');torchOn=!torchOn;try{await t.applyConstraints({advanced:[{torch:torchOn}]});$('#toggleTorch').classList.toggle('on',torchOn);$('#toggleTorch').textContent=torchOn?'🔦 關閉補光':'🔦 開啟補光'}catch(_){torchOn=false;showToast('無法控制補光燈','error')}}
 
   $('#useManualPf').addEventListener('click', () => {
     const value=normalizePf($('#manualPf').value);
