@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v3.4</title>
+  <title>PF Issue Logger Mobile v4.0</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -270,6 +270,26 @@
     .crop-controls { display:grid; grid-template-columns:1fr 1.5fr; gap:9px; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); }
     .crop-controls button { min-height:48px; }
 
+
+    .pf-group-card { border:2px solid #93c5fd; }
+    .group-id { display:block; margin-top:4px; color:#64748b; font-size:10px; }
+    .group-id strong { color:#1d4ed8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .pf-count { min-width:58px; padding:7px 9px; border-radius:999px; text-align:center; color:#1d4ed8; background:#eff6ff; font-size:11px; font-weight:900; }
+    .pf-count strong { font-size:16px; }
+    .draft-pf-list { display:grid; gap:8px; }
+    .draft-pf-empty { padding:20px 12px; border:1px dashed #93c5fd; border-radius:12px; text-align:center; color:#64748b; background:#f8fbff; font-size:12px; line-height:1.55; }
+    .draft-pf-item { display:grid; grid-template-columns:30px 1fr auto; gap:9px; align-items:center; padding:10px; border:1px solid #dbeafe; border-radius:12px; background:#f8fbff; }
+    .pf-order { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; color:white; background:#2563eb; font-size:11px; font-weight:900; }
+    .draft-pf-item strong { display:block; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14px; }
+    .draft-pf-item small { display:block; margin-top:2px; color:#64748b; font-size:9px; }
+    .draft-pf-item button { border:0; border-radius:8px; padding:7px 8px; color:#b91c1c; background:#fee2e2; font-size:10px; font-weight:900; }
+    .pf-list-helper { margin:10px 0 0; text-align:center; color:#64748b; font-size:10px; }
+    .export-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+    .record-group { font-weight:900; color:#1d4ed8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .history-pf-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+    .history-pf { padding:4px 7px; border-radius:7px; color:#334155; background:#f1f5f9; font-size:9px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    @media (max-width:390px) { .export-actions { grid-template-columns:1fr; } }
+
     .capture-hero h2 { margin-bottom:6px; }
     .capture-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:15px; }
     .capture-method { min-height:104px; border:1px solid rgba(255,255,255,.28); border-radius:14px; padding:10px 7px; color:white; background:rgba(255,255,255,.12); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
@@ -321,8 +341,8 @@
       <div class="content">
         <div class="hero capture-hero">
           <div class="hero-label">PF Capture</div>
-          <h2>取得 PF Code</h2>
-          <p>標籤條碼掃不到時，請改用「拍照辨識文字」；系統會優先擷取 S/N 後的 PF Code。</p>
+          <h2>建立多 PF Issue Group</h2>
+          <p>共同 Issue 資訊只需填一次，再用 Barcode、OCR 或手動輸入連續加入多個 PF Code。</p>
           <div class="capture-methods" role="group" aria-label="PF Code 輸入方式">
             <button class="capture-method" type="button" data-open-scanner><span class="method-icon">▥</span><strong>Barcode Scan</strong><small>掃描一維條碼</small></button>
             <button class="capture-method recommended" type="button" id="takeLabelPhoto"><span class="method-icon">▣</span><strong>拍照辨識文字</strong><small>辨識 S/N PF-…</small></button>
@@ -331,7 +351,7 @@
           <input type="file" id="labelOcrFile" accept="image/*" capture="environment" hidden />
           <div class="quick-manual" id="quickManual" hidden>
             <input id="quickManualPf" placeholder="例如：PF-5AF8KA" autocapitalize="characters" autocomplete="off" />
-            <button type="button" id="applyQuickManual">帶入</button>
+            <button type="button" id="applyQuickManual">加入清單</button>
           </div>
         </div>
 
@@ -363,15 +383,15 @@
         </div>
 
         <form id="issueForm" novalidate>
+          <div class="card pf-group-card">
+            <div class="section-head"><div><h2 class="section-title">Issue PF 清單</h2><span class="group-id">Group ID：<strong id="draftGroupId"></strong></span></div><span class="pf-count"><strong id="draftPfCount">0</strong> PF</span></div>
+            <input id="pfCode" name="pfCode" type="hidden" />
+            <div class="draft-pf-list" id="draftPfList"></div>
+            <p class="pf-list-helper">至少加入 1 個 PF 才能送出；同一 Issue Group 內會自動阻止重複 PF。</p>
+          </div>
+
           <div class="card">
-            <div class="section-head"><h2 class="section-title">設備資訊</h2><span class="required-note"><span class="req">*</span> 必填</span></div>
-            <div class="field">
-              <label for="pfCode">PF Code <span class="req">*</span></label>
-              <div class="pf-wrap">
-                <input id="pfCode" name="pfCode" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="例如：PF-5AF8KA" required />
-                <button class="mini-scan" type="button" aria-label="掃描 PF Code" data-open-scanner>▥</button>
-              </div>
-            </div>
+            <div class="section-head"><h2 class="section-title">共同 Issue 資訊</h2><span class="required-note"><span class="req">*</span> 必填</span></div>
             <div class="grid">
               <div class="field"><label for="project">Project <span class="req">*</span></label><input id="project" name="project" list="projectOptions" placeholder="例如：T14 Gen8" required /><datalist id="projectOptions"><option>T14 Gen8</option><option>T16 Gen6</option><option>MDP2</option><option>MD2</option></datalist></div>
               <div class="field"><label for="stage">Stage <span class="req">*</span></label><select id="stage" name="stage" required><option value="">請選擇</option><option>EVT</option><option>FVT</option><option>SIT</option><option>SVT</option><option>MP</option></select></div>
@@ -421,7 +441,7 @@
 
           <div class="card">
             <button class="submit-btn" id="submitBtn" type="submit">Submit Issue</button>
-            <p class="helper">送出後先保存在此手機；可於「紀錄」匯出 CSV</p>
+            <p class="helper">送出後建立一筆 Issue Group；可匯出 Group 或 PF 展開視圖</p>
           </div>
         </form>
       </div>
@@ -435,8 +455,9 @@
           <div class="metric"><strong id="metricClosed" style="color:var(--green)">0</strong><span>Closed</span></div>
         </div>
         <div class="card">
-          <div class="section-head"><h2 class="section-title">Issue 紀錄</h2><button class="secondary-btn" type="button" id="exportCsv">匯出 CSV</button></div>
-          <div class="toolbar"><input type="search" id="historySearch" placeholder="搜尋 PF、Project、Issue…" /></div>
+          <div class="section-head"><h2 class="section-title">Issue Group 紀錄</h2></div>
+          <div class="export-actions"><button class="secondary-btn" type="button" id="exportGroupCsv">匯出：一列一 Issue</button><button class="secondary-btn" type="button" id="exportPfCsv">匯出：一列一 PF</button></div>
+          <div class="toolbar"><input type="search" id="historySearch" placeholder="搜尋 Group ID、PF、Project、Issue…" /></div>
           <div class="record-list" id="recordList"></div>
         </div>
       </div>
@@ -449,7 +470,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.4<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v4.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>資料模型：一筆 Issue Group 對應多個 PF Code<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入<br>CSV：一列一 Issue／一列一 PF 兩種視圖</p></div>
         </div>
       </div>
     </section>
@@ -511,9 +532,10 @@
 <script>
 (() => {
   'use strict';
-  const STORAGE_KEY = 'pfIssueLogger.records.v1';
+  const STORAGE_KEY = 'pfIssueLogger.groups.v2';
+  const LEGACY_STORAGE_KEY = 'pfIssueLogger.records.v1';
   const SETTINGS_KEY = 'pfIssueLogger.settings.v1';
-  let records = safeParse(localStorage.getItem(STORAGE_KEY), []);
+  let records = loadAndMigrateRecords();
   let settings = safeParse(localStorage.getItem(SETTINGS_KEY), { reporter: 'Benson' });
   let photoData = '';
   let scanner = null;
@@ -542,6 +564,8 @@
   let activeVideoTrack = null;
   let lastBarcodeKey = '';
   let lastBarcodeAt = 0;
+  let draftPfCodes = [];
+  let draftGroupId = newGroupId();
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -564,7 +588,39 @@
   function esc(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
   function uid() { return 'PFI-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); }
   function nowText(iso) { return new Intl.DateTimeFormat('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso)); }
+  function newGroupId() {
+    const d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+    return 'IG-'+stamp+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+  }
+  function normalizePfEntry(p,index=0) {
+    if(typeof p==='string')return{code:normalizePf(p),order:index+1,source:'Manual',addedAt:new Date().toISOString()};
+    return{code:normalizePf(p.code||p.pfCode||''),order:index+1,source:p.source||p.pfSource||'Manual',addedAt:p.addedAt||new Date().toISOString(),rawValue:p.rawValue||p.barcodeRaw||'',format:p.format||p.barcodeFormat||'',labelType:p.labelType||'',labelDate:p.labelDate||'',ocrRisk:p.ocrRisk||''};
+  }
+  function normalizeGroupRecord(r,index=0) {
+    const list=Array.isArray(r.pfCodes)?r.pfCodes:(r.pfCode?[{code:r.pfCode,source:r.pfSource||'Legacy',rawValue:r.barcodeRaw||'',format:r.barcodeFormat||'',labelType:r.labelType||'',labelDate:r.labelDate||''}]:[]);
+    const pfCodes=list.map(normalizePfEntry).filter(x=>x.code);
+    return{...r,id:r.id||uid(),groupId:r.groupId||('LEGACY-'+String(r.id||index+1).replace(/[^A-Z0-9-]/gi,'').toUpperCase()),pfCodes,pfCode:undefined,pfSource:undefined};
+  }
+  function loadAndMigrateRecords() {
+    const current=safeParse(localStorage.getItem(STORAGE_KEY),null);if(Array.isArray(current))return current.map(normalizeGroupRecord);
+    const legacy=safeParse(localStorage.getItem(LEGACY_STORAGE_KEY),[]);return Array.isArray(legacy)?legacy.map(normalizeGroupRecord):[];
+  }
+  function pfDedupKey(code){return normalizePf(code).replace(/-/g,'')}
+  function addPfToDraft(value,meta={}) {
+    const code=normalizePf(value);if(!/^PF-?[A-Z0-9]{5,14}$/.test(code)){showToast('PF Code 格式不正確，例如 PF-5AF8KA','error');return false}
+    if(draftPfCodes.some(p=>pfDedupKey(p.code)===pfDedupKey(code))){showToast('此 PF 已在本 Issue Group 中，未重複加入','error');return false}
+    draftPfCodes.push({code,order:draftPfCodes.length+1,source:meta.source||'Manual',addedAt:new Date().toISOString(),rawValue:meta.rawValue||'',format:meta.format||'',labelType:meta.labelType||'',labelDate:meta.labelDate||'',ocrRisk:meta.ocrRisk||''});
+    renderDraftPfList();showToast('已加入 '+code+'（共 '+draftPfCodes.length+' PF）','success');return true;
+  }
+  function removeDraftPf(index){draftPfCodes.splice(index,1);draftPfCodes.forEach((p,i)=>p.order=i+1);renderDraftPfList();showToast('PF 已從清單移除')}
+  function renderDraftPfList(){
+    $('#draftGroupId').textContent=draftGroupId;$('#draftPfCount').textContent=draftPfCodes.length;const list=$('#draftPfList');
+    if(!draftPfCodes.length){list.innerHTML='<div class="draft-pf-empty">尚未加入 PF Code<br>請使用上方 Barcode、拍照 OCR 或手動輸入</div>';return}
+    list.innerHTML=draftPfCodes.map((p,i)=>'<div class="draft-pf-item"><span class="pf-order">'+(i+1)+'</span><div><strong>'+esc(p.code)+'</strong><small>'+esc(p.source)+(p.format?' · '+esc(p.format):'')+(p.labelType?' · TYPE '+esc(p.labelType):'')+'</small></div><button type="button" data-remove-draft-pf="'+i+'">刪除</button></div>').join('');
+  }
+  function resetDraftPfGroup(){draftPfCodes=[];draftGroupId=newGroupId();renderDraftPfList()}
   function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); updateMetrics(); }
+
   function showToast(message, type='') { toast.textContent = message; toast.className = 'toast show ' + type; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.className = 'toast', 3200); }
   function normalizePf(value) { return value.trim().toUpperCase().replace(/\s+/g, ''); }
   function setScannerStatus(text, kind='') {
@@ -581,6 +637,7 @@
   }
 
   $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+  $('#draftPfList').addEventListener('click',e=>{const i=e.target.dataset.removeDraftPf;if(i!==undefined)removeDraftPf(Number(i))});
   $$('[data-open-scanner]').forEach(btn => btn.addEventListener('click', openScanner));
   $('#closeScanner').addEventListener('click', closeScanner);
   $('#scannerModal').addEventListener('click', e => { if (e.target.id === 'scannerModal') closeScanner(); });
@@ -632,9 +689,9 @@
   function applyQuickManual() {
     const value=normalizePf($('#quickManualPf').value);
     if (!value) return showToast('請輸入 PF Code','error');
+    if(!addPfToDraft(value,{source:'Manual'}))return;
     captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
-    pfInput.value=value; $('#quickManual').hidden=true; $('#quickManualPf').value='';
-    pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已手動帶入：'+value,'success');
+    $('#quickManualPf').value='';renderDraftPfList();
   }
 
   function repairSerialToken(value) {
@@ -916,9 +973,9 @@
     if (!value || !/^PF-[A-Z0-9]{5,14}$/.test(value)) return showToast('請比對標籤並輸入完整格式，例如 PF-5AF8KA','error');
     if (!selectedCandidate && !confirm('目前值是手動輸入，未從候選清單選取。請再次確認已與實體標籤完全一致。')) return;
     captureMeta=pendingOcrMeta||{method:'Label OCR',ocrText:'',labelType:'',labelDate:''};
-    captureMeta.ocrRisk=recognitionRisk;captureMeta.selectedFromCandidates=!!selectedCandidate;pendingOcrMeta=null;
-    ocrAwaitingConfirmation=false;pfBeforeOcr='';pfInput.value=value;$('#labelOcrPanel').hidden=true;navigator.vibrate?.(80);
-    pfInput.scrollIntoView({behavior:'smooth',block:'center'});showToast('人工確認完成：'+value,'success');
+    captureMeta.ocrRisk=recognitionRisk;captureMeta.selectedFromCandidates=!!selectedCandidate;
+    if(!addPfToDraft(value,{source:'OCR',labelType:captureMeta.labelType,labelDate:captureMeta.labelDate,ocrRisk:recognitionRisk}))return;
+    pendingOcrMeta=null;ocrAwaitingConfirmation=false;pfBeforeOcr='';$('#labelOcrPanel').hidden=true;navigator.vibrate?.(80);renderDraftPfList();
   }
 
   function resetOcrPanel() {
@@ -1111,15 +1168,15 @@
 
   function resetBarcodeResult(){pendingBarcode=null;barcodePaused=false;$('#barcodeResult').hidden=true;$('#confirmBarcodePf').hidden=true;$('#barcodeToOcr').hidden=true;}
   function resumeBarcodeScanning(){resetBarcodeResult();setScannerStatus('繼續掃描：將長條條碼橫向填滿掃描框','ok');}
-  function confirmBarcodeResult(){if(!pendingBarcode?.pf)return;captureMeta={method:'Barcode',ocrText:'',labelType:'',labelDate:'',barcodeRaw:pendingBarcode.raw,barcodeFormat:pendingBarcode.format};pfInput.value=pendingBarcode.pf;closeScanner();showToast('條碼已人工確認：'+pendingBarcode.pf,'success');}
+  function confirmBarcodeResult(){if(!pendingBarcode?.pf)return;const b={...pendingBarcode};if(addPfToDraft(b.pf,{source:'Barcode',rawValue:b.raw,format:b.format})){captureMeta={method:'Barcode',ocrText:'',labelType:'',labelDate:'',barcodeRaw:b.raw,barcodeFormat:b.format};renderDraftPfList()}resumeBarcodeScanning();}
   async function barcodeToLabelOcr(){await closeScanner();setTimeout(()=>$('#labelOcrFile').click(),120);}
   async function toggleTorch(){const t=activeVideoTrack||nativeStream?.getVideoTracks?.()[0]||$('#reader video')?.srcObject?.getVideoTracks?.()[0];if(!t)return;const caps=t.getCapabilities?.()||{};if(!caps.torch)return showToast('此裝置不支援網頁補光燈','error');torchOn=!torchOn;try{await t.applyConstraints({advanced:[{torch:torchOn}]});$('#toggleTorch').classList.toggle('on',torchOn);$('#toggleTorch').textContent=torchOn?'🔦 關閉補光':'🔦 開啟補光'}catch(_){torchOn=false;showToast('無法控制補光燈','error')}}
 
   $('#useManualPf').addEventListener('click', () => {
     const value=normalizePf($('#manualPf').value);
     if (!value) return showToast('請輸入 PF Code','error');
-    captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
-    pfInput.value=value; closeScanner(); showToast('已帶入：'+value,'success');
+    if(!addPfToDraft(value,{source:'Manual'}))return;
+    captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};$('#manualPf').value='';renderDraftPfList();
   });
 
   pfInput.addEventListener('input', e => { if (e.isTrusted) captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''}; const pos = pfInput.selectionStart; pfInput.value = pfInput.value.toUpperCase(); try { pfInput.setSelectionRange(pos, pos); } catch (_) {} });
@@ -1163,34 +1220,20 @@
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-    if (ocrAwaitingConfirmation) {
-      $('#labelOcrPanel').scrollIntoView({behavior:'smooth',block:'start'});
-      showToast('請先確認或修正 OCR 辨識的 PF Code','error');
-      $('#confirmedPf').focus();
-      return;
-    }
-    pfInput.value = normalizePf(pfInput.value);
-    if (!form.reportValidity()) { showToast('請完成所有必填欄位', 'error'); return; }
-    const data = new FormData(form);
-    const record = {
-      id: uid(), createdAt: new Date().toISOString(), pfCode: data.get('pfCode'), project: data.get('project').trim(),
-      stage: data.get('stage'), station: data.get('station'), category: data.get('category'), severity: data.get('severity'),
-      symptom: data.get('symptom').trim(), action: data.get('action').trim(), owner: data.get('owner'), status: data.get('status'),
-      reporter: data.get('reporter').trim() || settings.reporter, photo: photoData,
-      pfSource: captureMeta.method, labelType: captureMeta.labelType, labelDate: captureMeta.labelDate, labelOcrText: captureMeta.ocrText
+    if(ocrAwaitingConfirmation){$('#labelOcrPanel').scrollIntoView({behavior:'smooth',block:'start'});showToast('請先完成或取消 OCR 確認','error');return}
+    if(!draftPfCodes.length){$('.pf-group-card').scrollIntoView({behavior:'smooth',block:'center'});showToast('送出前至少需要加入 1 個 PF Code','error');return}
+    if(!form.reportValidity()){showToast('請完成所有必填共同 Issue 欄位','error');return}
+    const data=new FormData(form),record={
+      id:uid(),groupId:draftGroupId,createdAt:new Date().toISOString(),pfCodes:draftPfCodes.map((p,i)=>({...p,order:i+1})),project:data.get('project').trim(),stage:data.get('stage'),station:data.get('station'),category:data.get('category'),severity:data.get('severity'),symptom:data.get('symptom').trim(),action:data.get('action').trim(),owner:data.get('owner').trim(),status:data.get('status'),reporter:data.get('reporter').trim()||settings.reporter,photo:photoData
     };
-    records.unshift(record);
-    try { saveRecords(); }
-    catch (err) { records.shift(); showToast('本機儲存空間不足，請先匯出並清理舊紀錄。', 'error'); return; }
-    $('#successText').innerHTML = '<strong>' + esc(record.pfCode) + '</strong><br>' + esc(record.station + ' / ' + record.category) + '<br>' + esc(nowText(record.createdAt) + ' / ' + record.reporter);
-    $('#successOverlay').classList.add('open');
-    const keep = { project: record.project, stage: record.stage, station: record.station, reporter: record.reporter };
-    form.reset(); clearPhoto(); captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''}; ocrAwaitingConfirmation=false; pendingOcrMeta=null; pfBeforeOcr='';
-    $('#project').value = keep.project; $('#stage').value = keep.stage; $('#station').value = keep.station; $('#reporter').value = keep.reporter;
-    form.querySelector('[name="severity"][value="Mid"]').checked = true;
+    records.unshift(record);try{saveRecords()}catch(err){records.shift();showToast('本機儲存空間不足，請先匯出並清理舊紀錄。','error');return}
+    $('#successText').innerHTML='<strong>'+esc(record.groupId)+'</strong><br>'+record.pfCodes.length+' PF · '+esc(record.station+' / '+record.category)+'<br>'+esc(nowText(record.createdAt)+' / '+record.reporter);
+    $('#successOverlay').classList.add('open');const keep={project:record.project,stage:record.stage,station:record.station,reporter:record.reporter};
+    form.reset();clearPhoto();resetDraftPfGroup();captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};ocrAwaitingConfirmation=false;pendingOcrMeta=null;pfBeforeOcr='';
+    $('#project').value=keep.project;$('#stage').value=keep.stage;$('#station').value=keep.station;$('#reporter').value=keep.reporter;form.querySelector('[name="severity"][value="Mid"]').checked=true;
   });
 
-  $('#successDone').addEventListener('click', () => { $('#successOverlay').classList.remove('open'); pfInput.focus(); });
+  $('#successDone').addEventListener('click', () => { $('#successOverlay').classList.remove('open'); window.scrollTo({top:0,behavior:'smooth'}); });
 
   function updateMetrics() {
     $('#metricTotal').textContent = records.length;
@@ -1199,34 +1242,31 @@
   }
 
   function renderRecords() {
-    const term = $('#historySearch').value.trim().toLowerCase();
-    const filtered = records.filter(r => [r.pfCode,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.owner,r.status,r.reporter].join(' ').toLowerCase().includes(term));
-    const list = $('#recordList');
-    if (!filtered.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><strong>' + (records.length ? '找不到符合的紀錄' : '尚無 Issue 紀錄') + '</strong><div style="font-size:12px;margin-top:6px">' + (records.length ? '請調整搜尋條件' : '掃描 PF 後建立第一筆資料') + '</div></div>'; return; }
-    list.innerHTML = filtered.map(r => {
-      const cls = String(r.status).toLowerCase();
-      return '<article class="record"><div class="record-main"><div><div class="record-pf">' + esc(r.pfCode) + '</div><div class="record-meta">' + esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · ')) + '</div><div class="record-issue">' + esc(r.symptom) + '</div></div><div><span class="badge ' + esc(cls) + '">' + esc(r.status) + '</span></div></div><div class="record-footer"><span>' + esc(nowText(r.createdAt)) + ' · ' + esc(r.reporter || '-') + ' · ' + esc(r.pfSource || 'Manual') + (r.photo ? ' · 📷' : '') + '</span><button type="button" data-delete="' + esc(r.id) + '">刪除</button></div></article>';
-    }).join('');
+    const term=$('#historySearch').value.trim().toLowerCase();
+    const filtered=records.filter(r=>[r.groupId,...(r.pfCodes||[]).map(p=>p.code),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.owner,r.status,r.reporter].join(' ').toLowerCase().includes(term));
+    const list=$('#recordList');if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📋</div><strong>'+(records.length?'找不到符合的 Issue Group':'尚無 Issue Group')+'</strong></div>';return}
+    list.innerHTML=filtered.map(r=>{const cls=String(r.status).toLowerCase(),pfs=r.pfCodes||[];return '<article class="record"><div class="record-main"><div><div class="record-group">'+esc(r.groupId)+'</div><div class="record-meta">'+esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · '))+'</div><div class="record-issue">'+esc(r.symptom)+'</div><div class="history-pf-list">'+pfs.map((p,i)=>'<span class="history-pf">'+(i+1)+'. '+esc(p.code)+' · '+esc(p.source)+'</span>').join('')+'</div></div><div><span class="badge '+esc(cls)+'">'+esc(r.status)+'</span></div></div><div class="record-footer"><span>'+esc(nowText(r.createdAt))+' · '+esc(r.reporter||'-')+' · '+pfs.length+' PF'+(r.photo?' · 📷':'')+'</span><button type="button" data-delete="'+esc(r.id)+'">刪除</button></div></article>'}).join('');
   }
-
-  $('#historySearch').addEventListener('input', renderRecords);
-  $('#recordList').addEventListener('click', e => {
-    const id = e.target.dataset.delete; if (!id) return;
-    if (!confirm('確定刪除這筆 Issue 紀錄？')) return;
-    records = records.filter(r => r.id !== id); saveRecords(); renderRecords(); showToast('紀錄已刪除');
+  $('#historySearch').addEventListener('input',renderRecords);
+  $('#recordList').addEventListener('click',e=>{const id=e.target.dataset.delete;if(!id)return;if(!confirm('確定刪除整筆 Issue Group？'))return;records=records.filter(r=>r.id!==id);saveRecords();renderRecords();showToast('Issue Group 已刪除')});
+  function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+  const COMMON_COLS=['Group ID','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
+  function commonRow(r){return[r.groupId,r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']}
+  $('#exportGroupCsv').addEventListener('click',()=>{
+    if(!records.length)return showToast('目前沒有可匯出的 Issue Group','error');
+    const cols=['Group ID','Created At','PF Count','PF Codes','PF Sources','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
+    const rows=records.map(r=>[r.groupId,r.createdAt,r.pfCodes.length,r.pfCodes.map(p=>p.code).join('; '),r.pfCodes.map(p=>p.source).join('; '),r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
+    download('\ufeff'+[cols,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n'),'pf-issues-group-view-'+dateStamp()+'.csv','text/csv;charset=utf-8');showToast('已匯出一列一 Issue 視圖','success');
   });
-
-  function csvCell(v) { return '"' + String(v ?? '').replace(/"/g, '""') + '"'; }
-  $('#exportCsv').addEventListener('click', () => {
-    if (!records.length) return showToast('目前沒有可匯出的紀錄', 'error');
-    const cols = ['ID','Created At','PF Code','PF Source','Label TYPE','Label Date','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
-    const rows = records.map(r => [r.id,r.createdAt,r.pfCode,r.pfSource||'',r.labelType||'',r.labelDate||'',r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
-    download('\ufeff' + [cols, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n'), 'pf-issues-' + dateStamp() + '.csv', 'text/csv;charset=utf-8');
-    showToast('CSV 已匯出', 'success');
+  $('#exportPfCsv').addEventListener('click',()=>{
+    if(!records.length)return showToast('目前沒有可匯出的 PF','error');
+    const cols=['Group ID','PF Order','PF Code','PF Source','Raw Barcode','Barcode Format','Label TYPE','Label Date','OCR Risk','PF Added At','Created At','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
+    const rows=records.flatMap(r=>r.pfCodes.map((p,i)=>[r.groupId,i+1,p.code,p.source,p.rawValue||'',p.format||'',p.labelType||'',p.labelDate||'',p.ocrRisk||'',p.addedAt||'',r.createdAt,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']));
+    download('\ufeff'+[cols,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n'),'pf-issues-pf-view-'+dateStamp()+'.csv','text/csv;charset=utf-8');showToast('已匯出一列一 PF 視圖','success');
   });
 
   $('#exportJson').addEventListener('click', () => {
-    download(JSON.stringify({version:1, exportedAt:new Date().toISOString(), records}, null, 2), 'pf-issues-backup-' + dateStamp() + '.json', 'application/json');
+    download(JSON.stringify({version:2, model:'Issue Group with multiple PF Codes', exportedAt:new Date().toISOString(), records}, null, 2), 'pf-issues-backup-' + dateStamp() + '.json', 'application/json');
     showToast('JSON 備份已匯出', 'success');
   });
   $('#importJsonBtn').addEventListener('click', () => $('#importJsonInput').click());
@@ -1236,7 +1276,7 @@
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data.records)) throw new Error('invalid');
       if (!confirm('將匯入 ' + data.records.length + ' 筆紀錄並取代目前資料，確定繼續？')) return;
-      records = data.records; saveRecords(); renderRecords(); showToast('資料已還原', 'success');
+      records=data.records.map(normalizeGroupRecord);saveRecords();renderRecords(); showToast('資料已還原', 'success');
     } catch { showToast('JSON 備份格式不正確', 'error'); }
     e.target.value = '';
   });
@@ -1256,7 +1296,7 @@
   function dateStamp() { const d = new Date(); return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); }
   function download(content, name, type) { const blob = new Blob([content], {type}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
 
-  updateMetrics(); renderRecords();
+  renderDraftPfList(); updateMetrics(); renderRecords();
 })();
 </script>
 </body>
