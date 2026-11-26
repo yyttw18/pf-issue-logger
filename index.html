@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v3.2</title>
+  <title>PF Issue Logger Mobile v3.3</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -218,6 +218,27 @@
     .success-card button { width: 100%; min-height: 46px; border: 0; border-radius: 12px; background: var(--navy); color: white; font-weight: 900; }
 
 
+
+    .recognition-summary { display:grid; grid-template-columns:1.1fr 1.2fr .9fr; gap:7px; margin:8px 0 11px; }
+    .recognition-summary div { min-width:0; padding:9px 7px; border:1px solid var(--line); border-radius:10px; background:#f8fafc; }
+    .recognition-summary small { display:block; margin-bottom:4px; color:#64748b; font-size:9px; font-weight:900; }
+    .recognition-summary strong { display:block; overflow-wrap:anywhere; color:#0f172a; font-size:12px; }
+    .confidence-banner { margin:9px 0 13px; padding:10px 11px; border-radius:11px; border:1px solid #fde68a; color:#92400e; background:#fffbeb; }
+    .confidence-banner strong { display:block; margin-bottom:3px; font-size:12px; }
+    .confidence-banner span { display:block; font-size:11px; line-height:1.45; }
+    .confidence-banner.high { border-color:#86efac; color:#166534; background:#f0fdf4; }
+    .confidence-banner.low { border-color:#fecaca; color:#991b1b; background:#fff1f2; }
+    .candidate-section { margin:12px 0; }
+    .candidate-section > label { margin-bottom:3px; }
+    .candidate-section > p { margin:0 0 8px; color:#64748b; font-size:10px; line-height:1.4; }
+    .candidate-list { display:grid; gap:7px; }
+    .candidate-btn { width:100%; border:1px solid #cbd5e1; border-radius:11px; padding:10px 11px; background:white; display:grid; grid-template-columns:1fr auto; gap:4px 8px; text-align:left; cursor:pointer; }
+    .candidate-btn strong { color:#0f172a; font-size:15px; letter-spacing:.04em; }
+    .candidate-btn em { align-self:center; border-radius:999px; padding:4px 7px; color:#475569; background:#f1f5f9; font-size:9px; font-style:normal; font-weight:900; }
+    .candidate-btn small { grid-column:1/-1; color:#64748b; font-size:10px; }
+    .candidate-btn.selected { border-color:#2563eb; background:#eff6ff; box-shadow:inset 0 0 0 1px #2563eb; }
+    .candidate-empty { padding:12px; border:1px dashed #fca5a5; border-radius:10px; color:#991b1b; background:#fff1f2; font-size:11px; line-height:1.5; }
+
     .vision-row { display:flex; align-items:center; justify-content:space-between; gap:9px; margin-top:10px; color:#475569; font-size:11px; }
     .vision-row span { flex:1; }
     .vision-row button { min-height:38px; white-space:nowrap; }
@@ -306,12 +327,21 @@
           <div class="processed-wrap" id="processedWrap" hidden><span>OCR 實際辨識區域</span><img id="processedLabelPreview" alt="強化後的標籤文字區域" /></div>
           <div class="ocr-progress" id="ocrProgress"><span id="ocrProgressText">正在準備照片…</span><div><i id="ocrProgressBar"></i></div></div>
           <div id="ocrResult" hidden>
-            <div class="detected-meta"><span id="detectedType">TYPE：—</span><span id="detectedDate">日期：—</span></div>
-            <div class="field"><label for="confirmedPf">確認／修正 PF Code <span class="req">*</span></label><input id="confirmedPf" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="例如：PF-5AF8KA" /></div>
-            <p class="confidence-note" id="ocrConfidence"></p>
-            <details><summary>查看辨識到的完整文字</summary><pre id="ocrRawText"></pre></details>
-            <div class="ocr-actions"><button type="button" class="secondary-btn" id="retakeLabel">重新拍照</button><button type="button" class="submit-btn" id="confirmLabelPf">確認並帶入</button></div>
-            <button type="button" class="crop-retry-btn" id="cropAfterFailure">辨識不正確？框選標籤後重新辨識</button>
+            <div class="recognition-summary">
+              <div><small>TYPE</small><strong id="detectedType">—</strong></div>
+              <div><small>PF Code</small><strong id="detectedPf">—</strong></div>
+              <div><small>Date Code</small><strong id="detectedDate">—</strong></div>
+            </div>
+            <div class="confidence-banner" id="ocrConfidenceBanner"><strong id="confidenceTitle">需要人工確認</strong><span id="ocrConfidence"></span></div>
+            <div class="candidate-section">
+              <label>PF Code 候選值 <span class="req">*</span></label>
+              <p>請比對實體標籤後點選正確值；系統不會直接寫入 PF Code。</p>
+              <div class="candidate-list" id="pfCandidateList"></div>
+            </div>
+            <div class="field"><label for="confirmedPf">人工確認／修正 PF Code <span class="req">*</span></label><input id="confirmedPf" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="點選候選值或手動輸入，例如 PF-5AF8KA" /></div>
+            <details><summary>查看各次 OCR 辨識文字</summary><pre id="ocrRawText"></pre></details>
+            <div class="ocr-actions"><button type="button" class="secondary-btn" id="retakeLabel">重新拍照</button><button type="button" class="submit-btn" id="confirmLabelPf">確認此 PF Code</button></div>
+            <button type="button" class="crop-retry-btn" id="cropAfterFailure">候選不正確？框選標籤後重新辨識</button>
           </div>
           <button type="button" class="text-btn" id="cancelLabelOcr">取消辨識</button>
         </div>
@@ -403,7 +433,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.2<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.3<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
         </div>
       </div>
     </section>
@@ -474,6 +504,9 @@
   let cropSelection = null;
   let cropDragging = false;
   let cropStart = null;
+  let currentCandidates = [];
+  let selectedCandidate = '';
+  let recognitionRisk = 'low';
   const OCR_CDNS = [
     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
     'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -525,6 +558,7 @@
   $('#quickManualPf').addEventListener('keydown', e => { if (e.key==='Enter') applyQuickManual(); });
   $('#labelOcrFile').addEventListener('change', handleLabelPhoto);
   $('#confirmLabelPf').addEventListener('click', confirmOcrPf);
+  $('#pfCandidateList').addEventListener('click', e => { const b=e.target.closest('[data-candidate]'); if (b) selectCandidate(b.dataset.candidate); });
   $('#manualCropRetry').addEventListener('click', openCropEditor);
   $('#cropAfterFailure').addEventListener('click', openCropEditor);
   $('#closeCrop').addEventListener('click', closeCropEditor);
@@ -635,7 +669,50 @@
     }
     return {pf,source,type,date,raw:original,normalized:text};
   }
-  window.PFLabelParser={extractLabelData,canonicalPf,repairSerialToken,normalizeOcrText};
+
+  function rawPfCandidates(raw) {
+    const text=normalizeOcrText(raw), out=[];
+    const cleanValue=value=>String(value||'').toUpperCase().split(/(?=20\d{2}|TYPE|TIPE|TPE|7YPE)/)[0].replace(/[\s:;,-]+$/,'');
+    const push=(value,source,penalty=0)=>{const v=canonicalPf(cleanValue(value),true);if(v&&/^PF-[A-Z0-9]{5,10}$/.test(v))out.push({value:v,source,penalty})};
+    const snRx=/(?:S\s*\/\s*N|S\/N|S[IL1]N|5\/N|SN|S[A4]|SERIAL\s*(?:NO\.?)?)\s*[:#=;,-]*\s*(P[FET]?\s*[-:]?\s*[A-Z0-9][A-Z0-9\s-]{4,16})/gi;
+    for(const m of text.matchAll(snRx)) { push(m[1],'S/N',0); const rawToken=cleanValue(m[1]).replace(/\s+/g,'').replace(/^PE/,'PF').replace(/^P[\/1I| -]?F/,'PF'); const mm=rawToken.match(/PF-?([A-Z0-9]{5,10})/); if(mm)out.push({value:'PF-'+mm[1],source:'S/N raw',penalty:10}); }
+    const pfRx=/\bP\s*[\/\\1I| -]?\s*F\s*[-:]?\s*[A-Z0-9][A-Z0-9\s-]{4,13}/gi;
+    for(const m of text.matchAll(pfRx)) { push(m[0],'PF text',18); const token=cleanValue(m[0]).replace(/\s+/g,'').replace(/^P[\/1I| -]?F-?/,'').replace(/[^A-Z0-9]/g,''); if(token.length>=5&&token.length<=10)out.push({value:'PF-'+token,source:'PF raw',penalty:24}); }
+    return out.filter(x=>/^PF-[A-Z0-9]{5,14}$/.test(x.value));
+  }
+
+  function buildCandidateAnalysis(passes) {
+    const map=new Map(),typeVotes=new Map(),dateVotes=new Map();
+    for(const pass of passes) {
+      const parsed=extractLabelData(pass.text||'');
+      if(parsed.type)typeVotes.set(parsed.type,(typeVotes.get(parsed.type)||0)+1);
+      if(parsed.date)dateVotes.set(parsed.date,(dateVotes.get(parsed.date)||0)+1);
+      const found=rawPfCandidates(pass.text||'');
+      if(parsed.pf)found.push({value:parsed.pf,source:parsed.source==='sn'?'S/N repaired':'PF repaired',penalty:parsed.source==='sn'?8:24});
+      const perPass=new Map();
+      for(const item of found) {
+        const value=item.source.includes('raw')?String(item.value||'').toUpperCase():canonicalPf(item.value,true);
+        if(!/^PF-[A-Z0-9]{5,10}$/.test(value))continue;
+        let add=(item.source.startsWith('S/N')?50:27)-(item.penalty||0)+Math.max(0,Math.min(15,(pass.confidence||0)*.15));
+        const prev=perPass.get(value)||{add:0,sources:new Set()};prev.add=Math.max(prev.add,add);prev.sources.add(item.source);perPass.set(value,prev);
+      }
+      for(const [value,item] of perPass) {
+        const row=map.get(value)||{value,score:0,passes:new Set(),sources:new Set(),occurrences:0};
+        row.score+=item.add;row.passes.add(pass.name);row.occurrences++;item.sources.forEach(x=>row.sources.add(x));map.set(value,row);
+      }
+    }
+    const candidates=[...map.values()].map(r=>({value:r.value,score:Math.round(r.score+r.passes.size*12+(r.passes.size>1?16:0)),passes:r.passes.size,sources:[...r.sources],occurrences:r.occurrences})).sort((a,b)=>b.score-a.score||b.passes-a.passes||a.value.localeCompare(b.value)).slice(0,5);
+    const voteTop=m=>[...m.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    const top=candidates[0],second=candidates[1];
+    const serialDistance=(a,b)=>{a=(a||'').replace(/^PF-/,'');b=(b||'').replace(/^PF-/,'');if(a.length!==b.length)return 99;let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n};
+    const snConflict=!!(top&&second&&second.sources.some(x=>x.startsWith('S/N'))&&serialDistance(top.value,second.value)<=2);
+    const closeScore=!!(top&&second&&second.score>=top.score*.62);
+    const conflict=snConflict||closeScore;
+    const unanimous=!!(top&&top.passes>=2&&!conflict);
+    const risk=!top?'low':unanimous&&top.score>=120?'high':top.score>=70&&!conflict?'medium':'low';
+    return {candidates,type:voteTop(typeVotes),date:voteTop(dateVotes),risk,conflict,unanimous};
+  }
+  window.PFLabelParser={extractLabelData,canonicalPf,repairSerialToken,normalizeOcrText,rawPfCandidates,buildCandidateAnalysis};
 
   function sourceSize(img) { return {w:img.naturalWidth||img.width,h:img.naturalHeight||img.height}; }
 
@@ -695,7 +772,12 @@
     return c.toDataURL('image/png');
   }
 
-  window.PFLabelVision={detectBlackLabel,enhanceLabelForOcr};
+
+  function makeThresholdVariant(dataUrl) {
+    return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0);const id=x.getImageData(0,0,c.width,c.height),d=id.data,h=new Uint32Array(256);for(let i=0;i<d.length;i+=4)h[d[i]]++;let sum=0,total=d.length/4;for(let i=0;i<256;i++)sum+=i*h[i];let sumB=0,wB=0,max=0,t=128;for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=total-wB;if(!wF)break;sumB+=i*h[i];const mB=sumB/wB,mF=(sum-sumB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>max){max=v;t=i}}for(let i=0;i<d.length;i+=4){const v=d[i]>t?255:0;d[i]=d[i+1]=d[i+2]=v}x.putImageData(id,0,0);resolve(c.toDataURL('image/png'))};im.onerror=reject;im.src=dataUrl});
+  }
+
+  window.PFLabelVision={detectBlackLabel,enhanceLabelForOcr,makeThresholdVariant};
 
   function setOcrProgress(label,pct) {
     $('#ocrProgressText').textContent=label; $('#ocrProgressBar').style.width=Math.max(4,Math.min(100,pct))+'%';
@@ -716,21 +798,29 @@
   }
 
   async function recognizeCurrentLabel(mode='裁切區域') {
-    if(!currentLabelImage||!currentLabelRect)return showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'影像無法載入，請重新拍照。');
-    $('#ocrResult').hidden=true;$('#ocrProgress').hidden=false;$('#processedWrap').hidden=false;setOcrProgress('正在放大、提高對比與銳利度…',14);
+    if(!currentLabelImage||!currentLabelRect)return showOcrCandidates({candidates:[],type:'',date:'',risk:'low',conflict:false},[],'影像無法載入，請重新拍照。');
+    $('#ocrResult').hidden=true;$('#ocrProgress').hidden=false;$('#processedWrap').hidden=false;setOcrProgress('正在建立多種影像強化版本…',12);
     const enhanced=enhanceLabelForOcr(currentLabelImage,currentLabelRect);window.__lastOcrImage=enhanced;
-    $('#processedLabelPreview').src=enhanced;$('#labelDetectionText').textContent=mode+'：已強化黑底白字標籤區域。';
-    setOcrProgress('正在載入文字辨識元件…',20);const loaded=await ensureOcrLibrary();
-    if(!loaded)return showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 元件無法載入；請框選標籤或手動輸入。');
+    const threshold=await makeThresholdVariant(enhanced).catch(()=>enhanced);
+    $('#processedLabelPreview').src=enhanced;$('#labelDetectionText').textContent=mode+'：已強化標籤，將進行多次 OCR 交叉比對。';
+    setOcrProgress('正在載入文字辨識元件…',18);const loaded=await ensureOcrLibrary();
+    if(!loaded)return showOcrCandidates({candidates:[],type:'',date:'',risk:'low',conflict:false},[],'OCR 元件無法載入；請手動輸入或重拍。');
+    const passes=[];
     try{
-      let result;
       if(Tesseract.createWorker){
-        const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')setOcrProgress('正在辨識強化後文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70)}});
-        try{await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-: .'});result=await worker.recognize(enhanced)}finally{await worker.terminate()}
-      }else result=await Tesseract.recognize(enhanced,'eng',{logger:m=>{if(m.status==='recognizing text')setOcrProgress('正在辨識強化後文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70)}});
-      const parsed=extractLabelData(result?.data?.text||'');
-      showOcrResult(parsed,parsed.pf?'已找到候選 PF Code，請確認或修正。':'此區域仍未找到 PF Code；請框選黑色標籤後重試。');
-    }catch(_){showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 執行失敗；請框選標籤後重新辨識。')}
+        const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')setOcrProgress('多次辨識交叉比對中… '+Math.round((m.progress||0)*100)+'%',22+(m.progress||0)*65)}});
+        try{
+          await worker.setParameters({preserve_interword_spaces:'1',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-: .'});
+          await worker.setParameters({tessedit_pageseg_mode:'6'});let r=await worker.recognize(enhanced);passes.push({name:'強化影像／區塊',text:r?.data?.text||'',confidence:r?.data?.confidence||0});
+          await worker.setParameters({tessedit_pageseg_mode:'7'});r=await worker.recognize(enhanced);passes.push({name:'強化影像／單行',text:r?.data?.text||'',confidence:r?.data?.confidence||0});
+          await worker.setParameters({tessedit_pageseg_mode:'6'});r=await worker.recognize(threshold);passes.push({name:'二值影像／區塊',text:r?.data?.text||'',confidence:r?.data?.confidence||0});
+        }finally{await worker.terminate()}
+      }else{
+        const r=await Tesseract.recognize(enhanced,'eng',{logger:m=>{if(m.status==='recognizing text')setOcrProgress('辨識中… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*65)}});passes.push({name:'強化影像',text:r?.data?.text||'',confidence:r?.data?.confidence||0});
+      }
+      const analysis=buildCandidateAnalysis(passes);
+      showOcrCandidates(analysis,passes,analysis.candidates.length?'請選擇並核對候選值。':'未取得可靠候選值，請框選、重拍或手動輸入。');
+    }catch(_){showOcrCandidates({candidates:[],type:'',date:'',risk:'low',conflict:false},passes,'OCR 執行失敗；請框選、重拍或手動輸入。')}
   }
 
   function setupCropCanvas(){
@@ -758,37 +848,43 @@
     currentLabelRect={...cropSelection,auto:false};closeCropEditor();$('#ocrBadge').textContent='重新辨識中';$('#ocrBadge').style.background='#fef3c7';$('#ocrBadge').style.color='#92400e';await recognizeCurrentLabel('手動框選');
   }
 
-  function showOcrResult(parsed,message) {
-    $('#ocrProgress').hidden=true; $('#ocrResult').hidden=false; $('#confirmedPf').value=parsed.pf||'';
-    $('#ocrRawText').textContent=parsed.raw||'（沒有取得辨識文字）';
-    $('#detectedType').textContent='TYPE：'+(parsed.type||'—'); $('#detectedDate').textContent='日期：'+(parsed.date||'—');
-    pendingOcrMeta={method:'Label OCR',ocrText:parsed.raw||'',labelType:parsed.type||'',labelDate:parsed.date||''};
-    if (parsed.pf) {
-      pfInput.value=parsed.pf;
-      ocrAwaitingConfirmation=true;
-      $('#ocrConfidence').textContent=(parsed.source==='sn'?'已優先從 S/N 後方擷取。':'已從 PF 開頭文字擷取。')+' 已自動填入 PF Code；請檢查、修正並按「確認並帶入」。';
-      $('#ocrBadge').textContent='已自動填入・待確認'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
-      showToast('OCR 已自動填入：'+parsed.pf+'，請確認或修正','success');
-    } else {
-      ocrAwaitingConfirmation=true;
-      $('#ocrConfidence').textContent='未自動找到 PF Code。請依照片或辨識文字輸入後，再按「確認並帶入」。 '+message;
-      $('#ocrBadge').textContent='需框選或修正'; $('#ocrBadge').style.background='#fee2e2'; $('#ocrBadge').style.color='#991b1b';
-    }
+  function showOcrCandidates(analysis,passes,message) {
+    $('#ocrProgress').hidden=true;$('#ocrResult').hidden=false;currentCandidates=analysis.candidates||[];selectedCandidate='';recognitionRisk=analysis.risk||'low';
+    $('#confirmedPf').value='';pfInput.value=pfBeforeOcr;ocrAwaitingConfirmation=true;
+    $('#detectedType').textContent=analysis.type||'—';$('#detectedPf').textContent=currentCandidates[0]?.value||'—';$('#detectedDate').textContent=analysis.date||'—';
+    $('#ocrRawText').textContent=passes.length?passes.map(p=>'['+p.name+'｜OCR '+Math.round(p.confidence||0)+'%]\n'+(p.text||'（無文字）')).join('\n\n'):'（沒有取得辨識文字）';
+    const banner=$('#ocrConfidenceBanner');banner.className='confidence-banner '+recognitionRisk;
+    if(recognitionRisk==='high'){ $('#confidenceTitle').textContent='候選一致，仍須人工核對';$('#ocrConfidence').textContent='多次 OCR 結果一致且來自 S/N 區域。為避免產線誤寫，仍需點選候選並確認。'; }
+    else if(currentCandidates.length){ $('#confidenceTitle').textContent=analysis.conflict?'候選值衝突，必須人工判定':'辨識信心不足，必須人工確認';$('#ocrConfidence').textContent=(analysis.conflict?'不同 OCR 結果不一致。':'只有部分辨識結果支持此候選。')+' '+message; }
+    else { $('#confidenceTitle').textContent='沒有可靠候選值';$('#ocrConfidence').textContent=message+' 請勿猜測，改用框選、重拍或手動輸入。'; }
+    const list=$('#pfCandidateList');
+    if(!currentCandidates.length)list.innerHTML='<div class="candidate-empty">未找到可安全採用的 PF Code。請框選黑色標籤重試、重新拍照，或在下方手動輸入。</div>';
+    else list.innerHTML=currentCandidates.map((c,i)=>'<button type="button" class="candidate-btn" data-candidate="'+esc(c.value)+'"><strong>'+esc(c.value)+'</strong><em>'+(i===0?'優先候選':'候選 '+(i+1))+'</em><small>'+esc(c.sources.join('、'))+' · '+c.passes+' 次 OCR 支持 · 評分 '+c.score+'</small></button>').join('');
+    pendingOcrMeta={method:'Label OCR',ocrText:passes.map(p=>p.text).join('\n---\n'),labelType:analysis.type||'',labelDate:analysis.date||''};
+    $('#ocrBadge').textContent=recognitionRisk==='high'?'候選一致・待人工確認':currentCandidates.length?'有候選・需人工判定':'無可靠候選';
+    $('#ocrBadge').style.background=recognitionRisk==='high'?'#dcfce7':currentCandidates.length?'#fef3c7':'#fee2e2';$('#ocrBadge').style.color=recognitionRisk==='high'?'#166534':currentCandidates.length?'#92400e':'#991b1b';
     $('#confirmedPf').focus();
   }
 
+  function selectCandidate(value) {
+    selectedCandidate=value;$('#confirmedPf').value=value;$('#detectedPf').textContent=value;
+    $$('#pfCandidateList .candidate-btn').forEach(b=>b.classList.toggle('selected',b.dataset.candidate===value));
+    showToast('已選擇候選值：'+value+'，請核對標籤後確認','success');
+  }
+
   function confirmOcrPf() {
-    const value=canonicalPf($('#confirmedPf').value)||normalizePf($('#confirmedPf').value);
-    if (!value || !/^PF-?[A-Z0-9]{5,14}$/.test(value)) return showToast('請確認 PF Code 格式，例如 PF-5AF8KA','error');
-    captureMeta=pendingOcrMeta||{method:'Label OCR',ocrText:'',labelType:'',labelDate:''}; pendingOcrMeta=null;
-    ocrAwaitingConfirmation=false; pfBeforeOcr='';
-    pfInput.value=value; $('#labelOcrPanel').hidden=true; navigator.vibrate?.(80);
-    pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已確認並帶入：'+value,'success');
+    const typed=$('#confirmedPf').value, value=canonicalPf(typed,true)||normalizePf(typed);
+    if (!value || !/^PF-[A-Z0-9]{5,14}$/.test(value)) return showToast('請比對標籤並輸入完整格式，例如 PF-5AF8KA','error');
+    if (!selectedCandidate && !confirm('目前值是手動輸入，未從候選清單選取。請再次確認已與實體標籤完全一致。')) return;
+    captureMeta=pendingOcrMeta||{method:'Label OCR',ocrText:'',labelType:'',labelDate:''};
+    captureMeta.ocrRisk=recognitionRisk;captureMeta.selectedFromCandidates=!!selectedCandidate;pendingOcrMeta=null;
+    ocrAwaitingConfirmation=false;pfBeforeOcr='';pfInput.value=value;$('#labelOcrPanel').hidden=true;navigator.vibrate?.(80);
+    pfInput.scrollIntoView({behavior:'smooth',block:'center'});showToast('人工確認完成：'+value,'success');
   }
 
   function resetOcrPanel() {
     if (ocrAwaitingConfirmation) pfInput.value=pfBeforeOcr;
-    pendingOcrMeta=null; ocrAwaitingConfirmation=false; pfBeforeOcr=''; currentLabelFile=null; currentLabelRect=null; cropSelection=null;
+    pendingOcrMeta=null; ocrAwaitingConfirmation=false; pfBeforeOcr=''; currentLabelFile=null; currentLabelRect=null; cropSelection=null; currentCandidates=[]; selectedCandidate=''; recognitionRisk='low';
     $('#labelOcrPanel').hidden=true; $('#ocrResult').hidden=true; $('#labelOcrFile').value='';
   }
 
