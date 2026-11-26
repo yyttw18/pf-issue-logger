@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>PF Issue Logger Mobile v2</title>
+  <title>PF Issue Logger Mobile v3</title>
   <style>
     :root {
       --navy: #0b1739;
@@ -216,6 +216,37 @@
     .success-card h2 { margin: 0 0 5px; font-size: 20px; }
     .success-card p { margin: 0 0 17px; color: var(--muted); font-size: 13px; line-height: 1.6; }
     .success-card button { width: 100%; min-height: 46px; border: 0; border-radius: 12px; background: var(--navy); color: white; font-weight: 900; }
+
+    .capture-hero h2 { margin-bottom:6px; }
+    .capture-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:15px; }
+    .capture-method { min-height:104px; border:1px solid rgba(255,255,255,.28); border-radius:14px; padding:10px 7px; color:white; background:rgba(255,255,255,.12); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
+    .capture-method:active { transform:scale(.98); background:rgba(255,255,255,.22); }
+    .capture-method.recommended { color:#0f3b70; background:white; border-color:white; box-shadow:0 6px 16px rgba(0,0,0,.14); }
+    .capture-method strong { font-size:13px; }
+    .capture-method small { font-size:10px; opacity:.82; }
+    .method-icon { font-size:25px; line-height:1; margin-bottom:3px; }
+    .quick-manual { display:flex; gap:8px; margin-top:12px; padding:10px; border-radius:13px; background:rgba(7,28,70,.24); }
+    .quick-manual input { min-width:0; background:white; color:#111827; }
+    .quick-manual button { min-width:72px; border:0; border-radius:11px; color:#1d4ed8; background:white; font-weight:900; }
+    .ocr-panel { border:2px solid #7dd3fc; box-shadow:0 12px 30px rgba(14,165,233,.13); }
+    .ocr-badge { border-radius:999px; padding:5px 9px; color:#075985; background:#e0f2fe; font-size:10px; font-weight:900; }
+    .label-example { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; font-size:10px; }
+    .label-example strong { width:100%; color:var(--muted); }
+    .label-example span { padding:5px 7px; border-radius:7px; color:#334155; background:#f1f5f9; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .label-preview { display:block; width:100%; max-height:250px; object-fit:contain; border-radius:12px; background:#e2e8f0; }
+    .ocr-progress { margin:13px 0; color:var(--muted); font-size:12px; }
+    .ocr-progress > div { height:8px; margin-top:7px; overflow:hidden; border-radius:99px; background:#e2e8f0; }
+    .ocr-progress i { display:block; width:6%; height:100%; border-radius:99px; background:linear-gradient(90deg,#2563eb,#06b6d4); transition:width .25s; }
+    .detected-meta { display:flex; flex-wrap:wrap; gap:7px; margin:8px 0 12px; }
+    .detected-meta span { padding:6px 8px; border-radius:8px; color:#334155; background:#f1f5f9; font-size:11px; }
+    .confidence-note { margin:-4px 0 12px; font-size:11px; color:var(--muted); }
+    .ocr-panel details { margin:10px 0 14px; border:1px solid var(--line); border-radius:10px; padding:10px; }
+    .ocr-panel summary { cursor:pointer; color:#475569; font-size:12px; font-weight:800; }
+    .ocr-panel pre { max-height:140px; overflow:auto; white-space:pre-wrap; word-break:break-word; color:#334155; font-size:11px; }
+    .ocr-actions { display:grid; grid-template-columns:1fr 1.4fr; gap:8px; }
+    .ocr-actions .submit-btn { min-height:46px; }
+    .text-btn { width:100%; margin-top:10px; border:0; background:transparent; color:var(--muted); font-size:12px; font-weight:800; }
+    @media (max-width:390px) { .capture-methods { grid-template-columns:1fr; } .capture-method { min-height:68px; flex-direction:row; justify-content:flex-start; padding:10px 14px; text-align:left; } .capture-method small { margin-left:auto; } .method-icon { width:30px; margin:0; } }
     @media (max-width: 390px) { .grid { grid-template-columns: 1fr; gap: 0; } .chips { grid-template-columns: repeat(2,1fr); } .sync-pill span { display: none; } }
     @media (min-width: 721px) { body { padding: 18px 0; } .app { border-radius: 24px; overflow: hidden; box-shadow: 0 22px 60px rgba(15,23,42,.15); background: var(--canvas); min-height: calc(100vh - 36px); } .bottom-nav { bottom: 18px; border-radius: 0 0 24px 24px; } .modal { align-items: center; } .modal-sheet { border-radius: 22px; } }
   </style>
@@ -235,14 +266,35 @@
   <main>
     <section class="view active" id="view-entry">
       <div class="content">
-        <div class="hero">
-          <div class="hero-label">Quick Capture</div>
-          <h2>掃描 PF 條碼</h2>
-          <p>支援手機相機掃描一維條碼，也可手動輸入</p>
-          <button class="scan-btn" type="button" data-open-scanner>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h3M21 5a2 2 0 0 0-2-2h-3M3 19a2 2 0 0 0 2 2h3M21 19a2 2 0 0 1-2 2h-3M7 8v8M10 8v8M14 8v8M17 8v8"/></svg>
-            開啟相機掃碼
-          </button>
+        <div class="hero capture-hero">
+          <div class="hero-label">PF Capture</div>
+          <h2>取得 PF Code</h2>
+          <p>標籤條碼掃不到時，請改用「拍照辨識文字」；系統會優先擷取 S/N 後的 PF Code。</p>
+          <div class="capture-methods" role="group" aria-label="PF Code 輸入方式">
+            <button class="capture-method" type="button" data-open-scanner><span class="method-icon">▥</span><strong>Barcode Scan</strong><small>掃描一維條碼</small></button>
+            <button class="capture-method recommended" type="button" id="takeLabelPhoto"><span class="method-icon">▣</span><strong>拍照辨識文字</strong><small>辨識 S/N PF-…</small></button>
+            <button class="capture-method" type="button" id="openManualCapture"><span class="method-icon">⌨</span><strong>手動輸入</strong><small>直接輸入 PF Code</small></button>
+          </div>
+          <input type="file" id="labelOcrFile" accept="image/*" capture="environment" hidden />
+          <div class="quick-manual" id="quickManual" hidden>
+            <input id="quickManualPf" placeholder="例如：PF-5AF8KA" autocapitalize="characters" autocomplete="off" />
+            <button type="button" id="applyQuickManual">帶入</button>
+          </div>
+        </div>
+
+        <div class="card ocr-panel" id="labelOcrPanel" hidden>
+          <div class="section-head"><h2 class="section-title">標籤文字辨識</h2><span class="ocr-badge" id="ocrBadge">準備中</span></div>
+          <div class="label-example"><strong>辨識目標</strong><span>TYPE 21R1-0SIT07</span><span>S/N PF-5AF8KA</span><span>2025/01</span></div>
+          <img id="labelPreview" class="label-preview" alt="待辨識的標籤照片" />
+          <div class="ocr-progress" id="ocrProgress"><span id="ocrProgressText">正在準備照片…</span><div><i id="ocrProgressBar"></i></div></div>
+          <div id="ocrResult" hidden>
+            <div class="detected-meta"><span id="detectedType">TYPE：—</span><span id="detectedDate">日期：—</span></div>
+            <div class="field"><label for="confirmedPf">確認／修正 PF Code <span class="req">*</span></label><input id="confirmedPf" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="例如：PF-5AF8KA" /></div>
+            <p class="confidence-note" id="ocrConfidence"></p>
+            <details><summary>查看辨識到的完整文字</summary><pre id="ocrRawText"></pre></details>
+            <div class="ocr-actions"><button type="button" class="secondary-btn" id="retakeLabel">重新拍照</button><button type="button" class="submit-btn" id="confirmLabelPf">確認並帶入</button></div>
+          </div>
+          <button type="button" class="text-btn" id="cancelLabelOcr">取消辨識</button>
         </div>
 
         <form id="issueForm" novalidate>
@@ -251,7 +303,7 @@
             <div class="field">
               <label for="pfCode">PF Code <span class="req">*</span></label>
               <div class="pf-wrap">
-                <input id="pfCode" name="pfCode" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="例如：PF5YV61F" required />
+                <input id="pfCode" name="pfCode" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="例如：PF-5AF8KA" required />
                 <button class="mini-scan" type="button" aria-label="掃描 PF Code" data-open-scanner>▥</button>
               </div>
             </div>
@@ -332,7 +384,7 @@
           <div class="settings-row"><h3>預設填寫人</h3><p>新紀錄將自動帶入此名稱。</p><input id="defaultReporter" value="Benson" /></div>
           <div class="settings-row"><h3>資料備份</h3><p>匯出完整 JSON（包含壓縮照片），或從既有備份還原。</p><div class="toolbar"><button class="secondary-btn" type="button" id="exportJson">匯出 JSON</button><button class="secondary-btn" type="button" id="importJsonBtn">匯入 JSON</button><input type="file" id="importJsonInput" accept="application/json" hidden /></div></div>
           <div class="settings-row"><h3>清除本機資料</h3><p>刪除這台手機瀏覽器中的全部 PF Issue 紀錄，此動作無法復原。</p><button class="danger-btn" type="button" id="clearAll">清除全部紀錄</button></div>
-          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v2.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>相機模式：即時掃描 + 拍攝條碼照片備援</p></div>
+          <div class="settings-row"><h3>系統資訊</h3><p>PF Issue Logger Mobile v3.0<br>儲存方式：Browser Local Storage<br>掃碼格式：Code 128 / Code 39 / Code 93 / EAN / ITF / UPC 等常見一維條碼<br>PF 取得方式：Barcode Scan + 標籤文字 OCR + 手動輸入</p></div>
         </div>
       </div>
     </section>
@@ -382,6 +434,14 @@
   let nativeFrame = 0;
   let scanningBusy = false;
   let scannerLibPromise = null;
+  let ocrLibPromise = null;
+  let captureMeta = { method: 'Manual', ocrText: '', labelType: '', labelDate: '' };
+  let pendingOcrMeta = null;
+  const OCR_CDNS = [
+    'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+    'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js'
+  ];
   const BARCODE_FORMATS = ['code_128','code_39','code_93','codabar','ean_13','ean_8','itf','upc_a','upc_e'];
   const SCANNER_CDNS = [
     'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
@@ -420,6 +480,14 @@
   $('#closeScanner').addEventListener('click', closeScanner);
   $('#scannerModal').addEventListener('click', e => { if (e.target.id === 'scannerModal') closeScanner(); });
   $('#retryLiveScan').addEventListener('click', startLiveScanner);
+  $('#takeLabelPhoto').addEventListener('click', () => $('#labelOcrFile').click());
+  $('#retakeLabel').addEventListener('click', () => $('#labelOcrFile').click());
+  $('#cancelLabelOcr').addEventListener('click', resetOcrPanel);
+  $('#openManualCapture').addEventListener('click', () => { const box=$('#quickManual'); box.hidden=!box.hidden; if (!box.hidden) $('#quickManualPf').focus(); });
+  $('#applyQuickManual').addEventListener('click', applyQuickManual);
+  $('#quickManualPf').addEventListener('keydown', e => { if (e.key==='Enter') applyQuickManual(); });
+  $('#labelOcrFile').addEventListener('change', handleLabelPhoto);
+  $('#confirmLabelPf').addEventListener('click', confirmOcrPf);
 
   function loadScript(url) {
     return new Promise((resolve,reject) => {
@@ -428,6 +496,127 @@
       script.onload=resolve; script.onerror=()=>{ script.remove(); reject(new Error('load failed')); };
       document.head.appendChild(script);
     });
+  }
+
+
+  async function ensureOcrLibrary() {
+    if (window.Tesseract) return true;
+    if (ocrLibPromise) return ocrLibPromise;
+    ocrLibPromise=(async()=>{
+      for (const url of OCR_CDNS) {
+        try { await loadScript(url); if (window.Tesseract) return true; } catch (_) {}
+      }
+      return false;
+    })();
+    const ok=await ocrLibPromise;
+    if (!ok) ocrLibPromise=null;
+    return ok;
+  }
+
+  function applyQuickManual() {
+    const value=normalizePf($('#quickManualPf').value);
+    if (!value) return showToast('請輸入 PF Code','error');
+    captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
+    pfInput.value=value; $('#quickManual').hidden=true; $('#quickManualPf').value='';
+    pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已手動帶入：'+value,'success');
+  }
+
+  function canonicalPf(value) {
+    let v=String(value||'').toUpperCase().replace(/[‐‑‒–—−_]/g,'-');
+    v=v.replace(/P\s*F/g,'PF').replace(/\s+/g,'');
+    const m=v.match(/PF-?[A-Z0-9]{5,14}/);
+    return m ? m[0] : '';
+  }
+
+  function extractLabelData(raw) {
+    const text=String(raw||'').toUpperCase().replace(/[‐‑‒–—−]/g,'-').replace(/\r/g,'\n');
+    const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    let pf='', source='none';
+    const snPattern=/(?:S\s*[\/\\|]?\s*N|SERIAL\s*(?:NO\.?)?)\s*[:#=-]?\s*((?:P\s*F)\s*-?\s*[A-Z0-9][A-Z0-9\s-]{4,18})/i;
+    const pfPattern=/(P\s*F\s*-?\s*[A-Z0-9]{5,14})/i;
+    for (const line of lines) {
+      const m=line.match(snPattern);
+      if (m && canonicalPf(m[1])) { pf=canonicalPf(m[1]); source='sn'; break; }
+    }
+    if (!pf) {
+      const compact=text.replace(/[ \t]+/g,' ');
+      const m=compact.match(snPattern);
+      if (m) { pf=canonicalPf(m[1]); if (pf) source='sn'; }
+    }
+    if (!pf) {
+      for (const line of lines) {
+        const m=line.match(pfPattern);
+        if (m && canonicalPf(m[1])) { pf=canonicalPf(m[1]); source='pf'; break; }
+      }
+    }
+    const typeMatch=text.match(/TYPE\s*[:#=-]?\s*([A-Z0-9][A-Z0-9-]{3,20})/i);
+    const dateMatch=text.match(/\b(20\d{2}[\/.\-](?:0?[1-9]|1[0-2]))\b/);
+    return {pf,source,type:typeMatch?typeMatch[1]:'',date:dateMatch?dateMatch[1].replace(/[.\-]/g,'/'):'',raw:String(raw||'').trim()};
+  }
+  window.PFLabelParser={extractLabelData,canonicalPf};
+
+  async function preprocessLabelImage(file) {
+    const bitmap=await createImageBitmap(file);
+    const maxW=1800, scale=Math.min(2.2,maxW/bitmap.width);
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale)); canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    ctx.filter='grayscale(1) contrast(1.65)'; ctx.drawImage(bitmap,0,0,canvas.width,canvas.height); bitmap.close?.();
+    return canvas.toDataURL('image/jpeg',.92);
+  }
+
+  function setOcrProgress(label,pct) {
+    $('#ocrProgressText').textContent=label; $('#ocrProgressBar').style.width=Math.max(4,Math.min(100,pct))+'%';
+  }
+
+  async function handleLabelPhoto(e) {
+    const file=e.target.files?.[0]; if (!file) return;
+    const panel=$('#labelOcrPanel'); panel.hidden=false; $('#ocrResult').hidden=true; $('#ocrProgress').hidden=false;
+    $('#ocrBadge').textContent='辨識中'; $('#ocrBadge').style.background='#fef3c7'; $('#ocrBadge').style.color='#92400e';
+    const preview=$('#labelPreview'); if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
+    preview.dataset.url=URL.createObjectURL(file); preview.src=preview.dataset.url;
+    panel.scrollIntoView({behavior:'smooth',block:'start'}); setOcrProgress('正在強化標籤文字…',10);
+    let image;
+    try { image=await preprocessLabelImage(file); } catch (_) { image=file; }
+    setOcrProgress('正在載入文字辨識元件…',18);
+    const loaded=await ensureOcrLibrary();
+    if (!loaded) {
+      showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'OCR 元件無法載入；請查看照片後手動輸入 PF Code。');
+      e.target.value=''; return;
+    }
+    try {
+      const result=await Tesseract.recognize(image,'eng',{logger:m=>{
+        if (m.status==='recognizing text') setOcrProgress('正在辨識標籤文字… '+Math.round((m.progress||0)*100)+'%',25+(m.progress||0)*70);
+        else if (m.status) setOcrProgress('文字辨識準備中…',22);
+      }});
+      const parsed=extractLabelData(result?.data?.text||'');
+      showOcrResult(parsed,parsed.pf?'已找到候選 PF Code，請確認或修正後再帶入。':'未自動找到 PF Code，請依照片／辨識文字手動輸入。');
+    } catch (err) {
+      showOcrResult({pf:'',source:'none',type:'',date:'',raw:''},'文字辨識失敗；請依照片手動輸入 PF Code。');
+    }
+    e.target.value='';
+  }
+
+  function showOcrResult(parsed,message) {
+    $('#ocrProgress').hidden=true; $('#ocrResult').hidden=false; $('#confirmedPf').value=parsed.pf||'';
+    $('#ocrRawText').textContent=parsed.raw||'（沒有取得辨識文字）';
+    $('#detectedType').textContent='TYPE：'+(parsed.type||'—'); $('#detectedDate').textContent='日期：'+(parsed.date||'—');
+    $('#ocrConfidence').textContent=(parsed.source==='sn'?'高可信度：取自 S/N 後方。':parsed.source==='pf'?'候選結果：取自 PF 開頭文字。':'需要人工輸入／修正。')+' '+message;
+    $('#ocrBadge').textContent=parsed.pf?'待確認':'需修正'; $('#ocrBadge').style.background=parsed.pf?'#dcfce7':'#fee2e2'; $('#ocrBadge').style.color=parsed.pf?'#166534':'#991b1b';
+    pendingOcrMeta={method:'Label OCR',ocrText:parsed.raw||'',labelType:parsed.type||'',labelDate:parsed.date||''};
+    $('#confirmedPf').focus();
+  }
+
+  function confirmOcrPf() {
+    const value=canonicalPf($('#confirmedPf').value)||normalizePf($('#confirmedPf').value);
+    if (!value || !/^PF-?[A-Z0-9]{5,14}$/.test(value)) return showToast('請確認 PF Code 格式，例如 PF-5AF8KA','error');
+    captureMeta=pendingOcrMeta||{method:'Label OCR',ocrText:'',labelType:'',labelDate:''}; pendingOcrMeta=null;
+    pfInput.value=value; $('#labelOcrPanel').hidden=true; navigator.vibrate?.(80);
+    pfInput.scrollIntoView({behavior:'smooth',block:'center'}); showToast('已確認並帶入：'+value,'success');
+  }
+
+  function resetOcrPanel() {
+    pendingOcrMeta=null; $('#labelOcrPanel').hidden=true; $('#ocrResult').hidden=true; $('#labelOcrFile').value='';
   }
 
   async function ensureScannerLibrary() {
@@ -592,6 +781,7 @@
 
   function setPfFromScan(value) {
     const pf=normalizePf(value); if (!pf) return;
+    captureMeta={method:'Barcode',ocrText:'',labelType:'',labelDate:''};
     pfInput.value=pf; navigator.vibrate?.(100);
     closeScanner(); showToast('已掃描：'+pf,'success');
   }
@@ -599,10 +789,11 @@
   $('#useManualPf').addEventListener('click', () => {
     const value=normalizePf($('#manualPf').value);
     if (!value) return showToast('請輸入 PF Code','error');
+    captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
     pfInput.value=value; closeScanner(); showToast('已帶入：'+value,'success');
   });
 
-  pfInput.addEventListener('input', () => { const pos = pfInput.selectionStart; pfInput.value = pfInput.value.toUpperCase(); try { pfInput.setSelectionRange(pos, pos); } catch (_) {} });
+  pfInput.addEventListener('input', e => { if (e.isTrusted) captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''}; const pos = pfInput.selectionStart; pfInput.value = pfInput.value.toUpperCase(); try { pfInput.setSelectionRange(pos, pos); } catch (_) {} });
 
   $('#takeIssuePhoto').addEventListener('click', () => $('#photoInput').click());
   $('#photoInput').addEventListener('change', async e => {
@@ -650,7 +841,8 @@
       id: uid(), createdAt: new Date().toISOString(), pfCode: data.get('pfCode'), project: data.get('project').trim(),
       stage: data.get('stage'), station: data.get('station'), category: data.get('category'), severity: data.get('severity'),
       symptom: data.get('symptom').trim(), action: data.get('action').trim(), owner: data.get('owner'), status: data.get('status'),
-      reporter: data.get('reporter').trim() || settings.reporter, photo: photoData
+      reporter: data.get('reporter').trim() || settings.reporter, photo: photoData,
+      pfSource: captureMeta.method, labelType: captureMeta.labelType, labelDate: captureMeta.labelDate, labelOcrText: captureMeta.ocrText
     };
     records.unshift(record);
     try { saveRecords(); }
@@ -658,7 +850,7 @@
     $('#successText').innerHTML = '<strong>' + esc(record.pfCode) + '</strong><br>' + esc(record.station + ' / ' + record.category) + '<br>' + esc(nowText(record.createdAt) + ' / ' + record.reporter);
     $('#successOverlay').classList.add('open');
     const keep = { project: record.project, stage: record.stage, station: record.station, reporter: record.reporter };
-    form.reset(); clearPhoto();
+    form.reset(); clearPhoto(); captureMeta={method:'Manual',ocrText:'',labelType:'',labelDate:''};
     $('#project').value = keep.project; $('#stage').value = keep.stage; $('#station').value = keep.station; $('#reporter').value = keep.reporter;
     form.querySelector('[name="severity"][value="Mid"]').checked = true;
   });
@@ -678,7 +870,7 @@
     if (!filtered.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><strong>' + (records.length ? '找不到符合的紀錄' : '尚無 Issue 紀錄') + '</strong><div style="font-size:12px;margin-top:6px">' + (records.length ? '請調整搜尋條件' : '掃描 PF 後建立第一筆資料') + '</div></div>'; return; }
     list.innerHTML = filtered.map(r => {
       const cls = String(r.status).toLowerCase();
-      return '<article class="record"><div class="record-main"><div><div class="record-pf">' + esc(r.pfCode) + '</div><div class="record-meta">' + esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · ')) + '</div><div class="record-issue">' + esc(r.symptom) + '</div></div><div><span class="badge ' + esc(cls) + '">' + esc(r.status) + '</span></div></div><div class="record-footer"><span>' + esc(nowText(r.createdAt)) + ' · ' + esc(r.reporter || '-') + (r.photo ? ' · 📷' : '') + '</span><button type="button" data-delete="' + esc(r.id) + '">刪除</button></div></article>';
+      return '<article class="record"><div class="record-main"><div><div class="record-pf">' + esc(r.pfCode) + '</div><div class="record-meta">' + esc([r.project,r.stage,r.station,r.severity].filter(Boolean).join(' · ')) + '</div><div class="record-issue">' + esc(r.symptom) + '</div></div><div><span class="badge ' + esc(cls) + '">' + esc(r.status) + '</span></div></div><div class="record-footer"><span>' + esc(nowText(r.createdAt)) + ' · ' + esc(r.reporter || '-') + ' · ' + esc(r.pfSource || 'Manual') + (r.photo ? ' · 📷' : '') + '</span><button type="button" data-delete="' + esc(r.id) + '">刪除</button></div></article>';
     }).join('');
   }
 
@@ -692,8 +884,8 @@
   function csvCell(v) { return '"' + String(v ?? '').replace(/"/g, '""') + '"'; }
   $('#exportCsv').addEventListener('click', () => {
     if (!records.length) return showToast('目前沒有可匯出的紀錄', 'error');
-    const cols = ['ID','Created At','PF Code','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
-    const rows = records.map(r => [r.id,r.createdAt,r.pfCode,r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
+    const cols = ['ID','Created At','PF Code','PF Source','Label TYPE','Label Date','Project','Stage','Station','Category','Severity','Failure Symptom','Immediate Action','Owner','Status','Reporter','Has Photo'];
+    const rows = records.map(r => [r.id,r.createdAt,r.pfCode,r.pfSource||'',r.labelType||'',r.labelDate||'',r.project,r.stage,r.station,r.category,r.severity,r.symptom,r.action,r.owner,r.status,r.reporter,r.photo?'Yes':'No']);
     download('\ufeff' + [cols, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n'), 'pf-issues-' + dateStamp() + '.csv', 'text/csv;charset=utf-8');
     showToast('CSV 已匯出', 'success');
   });
